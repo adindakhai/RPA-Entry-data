@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Mockup MTL Online</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .container { border: 1px solid #4CAF50; padding: 15px; max-width: 600px; }
+        h1 { color: #333; }
+        .form-group { margin-bottom: 10px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input { width: 95%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        /* Style untuk menandai input yang diisi oleh ekstensi */
+        .autofilled { background-color: #FFFFE0 !important; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Form Input Data MTL</h1>
+        <hr>
+        <form id="mtl-form">
+            <div class="form-group">
+                <label for="nomor_surat">Nomor Surat Referensi</label>
+                <input type="text" id="nomor_surat" name="nomor_surat">
+            </div>
+            <div class="form-group">
+                <label for="perihal_surat">Perihal</label>
+                <input type="text" id="perihal_surat" name="perihal_surat">
+            </div>
+            <div class="form-group">
+                <label for="asal_surat">Asal Surat</label>
+                <input type="text" id="asal_surat" name="asal_surat">
+            </div>
+            <button type="submit" style="padding:10px 15px;">Submit Data</button>
+        </form>
+    </div>
+</body>
+</html>

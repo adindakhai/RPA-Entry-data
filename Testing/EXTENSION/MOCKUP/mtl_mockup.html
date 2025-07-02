@@ -20,31 +20,116 @@
 
         <main class="bg-white p-8 rounded-lg shadow-lg">
             <div id="status-message" class="hidden mb-4 p-4 rounded-md text-white"></div>
-            <h2 class="text-xl font-semibold mb-6">Formulir Entri Data</h2>
+            <h2 class="text-xl font-semibold mb-6">Input MTL dengan SPK Baru</h2>
             <form id="mtl-form" class="space-y-6">
                 <div>
-                    <label for="input-nomor-nota" class="block text-sm font-medium text-gray-700 mb-1">Nomor Nota</label>
-                    <input type="text" id="input-nomor-nota" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <label for="input-no-spk" class="block text-sm font-medium text-gray-700 mb-1">No SPK</label>
+                    <input type="text" id="input-no-spk" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Nomor SPK">
                 </div>
                 <div>
-                    <label for="input-perihal" class="block text-sm font-medium text-gray-700 mb-1">Perihal</label>
-                    <input type="text" id="input-perihal" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                 <div>
-                    <label for="input-pengirim" class="block text-sm font-medium text-gray-700 mb-1">Asal Nota (Pengirim)</label>
-                    <input type="text" id="input-pengirim" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <label for="input-kelompok" class="block text-sm font-medium text-gray-700 mb-1">Kelompok</label>
+                    <select id="input-kelompok" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <option>-</option>
+                    </select>
                 </div>
                 <div>
-                    <label for="input-id-lampiran" class="block text-sm font-medium text-gray-700 mb-1">ID Lampiran</label>
-                    <input type="text" id="input-id-lampiran" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <label for="input-code" class="block text-sm font-medium text-gray-700 mb-1">CODE</label>
+                    <input type="text" id="input-code" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="CODE">
                 </div>
                 <div>
-                    <label for="input-catatan" class="block text-sm font-medium text-gray-700 mb-1">Catatan Tambahan</label>
-                    <textarea id="input-catatan" rows="4" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+                    <label for="input-masa-penyelesaian" class="block text-sm font-medium text-gray-700 mb-1">Masa Penyelesaian Pekerjaan</label>
+                    <input type="text" id="input-masa-penyelesaian" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Masa Penyelesaian Pekerjaan">
                 </div>
-                <div class="flex justify-end">
+                <div>
+                    <label for="input-matriks-program" class="block text-sm font-medium text-gray-700 mb-1">Matriks Program</label>
+                    <input type="text" id="input-matriks-program" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Matriks Program">
+                </div>
+                <div>
+                    <label for="input-tanggal-matriks" class="block text-sm font-medium text-gray-700 mb-1">Tanggal Matriks</label>
+                    <input type="date" id="input-tanggal-matriks" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="input-nomor-nd-svp-ia" class="block text-sm font-medium text-gray-700 mb-1">Nomor ND SVP IA</label>
+                    <input type="text" id="input-nomor-nd-svp-ia" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Nomor ND SVP IA">
+                </div>
+                <div>
+                    <label for="input-deskripsi-nd-svp-ia" class="block text-sm font-medium text-gray-700 mb-1">Deskripsi ND SVP IA</label>
+                    <input type="text" id="input-deskripsi-nd-svp-ia" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Deskripsi ND SVP IA">
+                </div>
+                <div>
+                    <label for="input-tanggal-nd-svp-ia" class="block text-sm font-medium text-gray-700 mb-1">Tanggal ND SVP IA</label>
+                    <input type="date" id="input-tanggal-nd-svp-ia" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="input-temuan-nd-svp-ia" class="block text-sm font-medium text-gray-700 mb-1">Temuan ND SVP IA</label>
+                    <textarea id="input-temuan-nd-svp-ia" rows="2" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Temuan ND SVP IA"></textarea>
+                </div>
+                <div>
+                    <label for="input-rekomendasi-nd-svp-ia" class="block text-sm font-medium text-gray-700 mb-1">Rekomendasi ND SVP IA</label>
+                    <textarea id="input-rekomendasi-nd-svp-ia" rows="2" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Rekomendasi ND SVP IA"></textarea>
+                </div>
+                <div>
+                    <label for="input-nomor-nd-dirut" class="block text-sm font-medium text-gray-700 mb-1">Nomor ND Dirut</label>
+                    <input type="text" id="input-nomor-nd-dirut" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Nomor ND Dirut">
+                </div>
+                <div>
+                    <label for="input-deskripsi-nd-dirut" class="block text-sm font-medium text-gray-700 mb-1">Deskripsi ND Dirut</label>
+                    <input type="text" id="input-deskripsi-nd-dirut" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Deskripsi ND Dirut">
+                </div>
+                <div>
+                    <label for="input-tanggal-nd-dirut" class="block text-sm font-medium text-gray-700 mb-1">Tanggal ND Dirut</label>
+                    <input type="date" id="input-tanggal-nd-dirut" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="input-temuan-nd-dirut" class="block text-sm font-medium text-gray-700 mb-1">Temuan ND Dirut</label>
+                    <textarea id="input-temuan-nd-dirut" rows="2" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Temuan ND Dirut"></textarea>
+                </div>
+                <div>
+                    <label for="input-rekomendasi-nd-dirut" class="block text-sm font-medium text-gray-700 mb-1">Rekomendasi ND Dirut</label>
+                    <textarea id="input-rekomendasi-nd-dirut" rows="2" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Rekomendasi ND Dirut"></textarea>
+                </div>
+                <div class="flex gap-2">
+                    <div class="w-1/3">
+                        <label for="input-duedate-nd-dirut" class="block text-sm font-medium text-gray-700 mb-1">Duedate ND Dirut</label>
+                        <input type="date" id="input-duedate-nd-dirut" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div class="w-1/3">
+                        <label for="input-pic-nd-dirut" class="block text-sm font-medium text-gray-700 mb-1">PIC ND Dirut</label>
+                        <input type="text" id="input-pic-nd-dirut" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="PIC ND Dirut">
+                    </div>
+                    <div class="w-1/3">
+                        <label for="input-uic-nd-dirut" class="block text-sm font-medium text-gray-700 mb-1">UIC ND Dirut</label>
+                        <input type="text" id="input-uic-nd-dirut" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="UIC ND Dirut">
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <div class="w-1/4">
+                        <label for="input-mtl-closed" class="block text-sm font-medium text-gray-700 mb-1">MTL Closed</label>
+                        <input type="text" id="input-mtl-closed" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="MTL Closed">
+                    </div>
+                    <div class="w-1/4">
+                        <label for="input-reschedule" class="block text-sm font-medium text-gray-700 mb-1">Reschedule</label>
+                        <input type="text" id="input-reschedule" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Reschedule">
+                    </div>
+                    <div class="w-1/4">
+                        <label for="input-overdue" class="block text-sm font-medium text-gray-700 mb-1">Overdue</label>
+                        <input type="text" id="input-overdue" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Overdue">
+                    </div>
+                    <div class="w-1/4">
+                        <label for="input-onschedule" class="block text-sm font-medium text-gray-700 mb-1">OnSchedule</label>
+                        <input type="text" id="input-onschedule" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="OnSchedule">
+                    </div>
+                </div>
+                <div>
+                    <label for="input-status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <input type="text" id="input-status" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Status">
+                </div>
+                <div class="flex justify-end gap-2">
                     <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                        Simpan ke Database
+                        Simpan
+                    </button>
+                    <button type="button" class="bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                        Close
                     </button>
                 </div>
             </form>
@@ -53,6 +138,9 @@
 
     <!-- Skrip yang menyebabkan error telah dihapus dari sini -->
     <script src="../content.js"></script>
+
+    <!-- Tambahkan input hidden agar content script tidak error -->
+    <input type="hidden" id="input-id-lampiran" value="">
 
 </body>
 </html>

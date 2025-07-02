@@ -71,9 +71,9 @@ if (window.location.href.includes('mtl_mockup.html')) {
                 console.log("Found data in storage to fill MTL form:", data);
                 
                 // Fill the form fields
-                document.getElementById('input-nomor-nota').value = data.nomorNota || '';
-                document.getElementById('input-perihal').value = data.perihal || '';
-                document.getElementById('input-pengirim').value = data.pengirim || '';
+                document.getElementById('input-no-spk').value = data.nomorNota || '';
+                document.getElementById('input-nomor-nd-svp-ia').value = data.pengirim || '';
+                document.getElementById('input-deskripsi-nd-svp-ia').value = data.perihal || '';
                 document.getElementById('input-id-lampiran').value = data.idLampiran || '';
 
                 // Show a success message

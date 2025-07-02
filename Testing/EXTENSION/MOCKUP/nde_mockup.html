@@ -3,52 +3,134 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mockup - Nota Dinas Elektronik (NDE)</title>
+    <title>Nota Dinas - Laporan Hasil Audit Implementasi IOAN</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
+        /* Custom list styling to match the document */
+        .list-alpha { list-style-type: lower-alpha; }
+        .list-decimal { list-style-type: decimal; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
 
     <div class="container mx-auto p-4 md:p-8">
-        <header class="bg-white shadow-md rounded-lg p-6 mb-8">
-            <h1 class="text-2xl font-bold text-gray-700">Nota Dinas Elektronik (NDE) - Mockup</h1>
-            <p class="text-gray-500">Halaman ini adalah simulasi untuk pengembangan ekstensi.</p>
-        </header>
-
-        <!-- Versi HTML Standar -->
         <main class="bg-white p-8 rounded-lg shadow-lg">
-            <h2 class="text-xl font-semibold border-b pb-2 mb-4">Detail Nota Dinas</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="md:col-span-1 font-semibold">Nomor Nota</div>
-                <div id="nomor-nota" class="md:col-span-2 bg-gray-50 p-2 rounded">ND-123/WPB.06/KP.01/2024</div>
+            <div class="flex justify-between items-start pb-4 border-b">
+                <h1 class="text-3xl font-bold text-gray-800">Notadinas</h1>
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Telkom_Indonesia_2013_logo.svg/2560px-Telkom_Indonesia_2013_logo.svg.png" alt="Logo Telkom Indonesia" class="h-10">
+            </div>
 
-                <div class="md:col-span-1 font-semibold">Tanggal</div>
-                <div id="tanggal-nota" class="md:col-span-2 bg-gray-50 p-2 rounded">02 Juli 2025</div>
+            <div class="grid grid-cols-6 gap-x-4 gap-y-2 mt-6">
+                <div class="col-span-1 font-semibold">Nomor</div>
+                <div class="col-span-5" id="nomor-nota">: C.Tel.72/PW 000/COP-C0000000/2024/Rhs</div>
 
-                <div class="md:col-span-1 font-semibold">Perihal</div>
-                <div id="perihal" class="md:col-span-2 bg-gray-50 p-2 rounded">Permintaan Data Awal Audit Kinerja</div>
+                <div class="col-span-1 font-semibold">Kepada</div>
+                <div class="col-span-5">: Sdr. DIREKTUR UTAMA</div>
 
-                <div class="md:col-span-1 font-semibold">Pengirim</div>
-                <div id="pengirim" class="md:col-span-2 bg-gray-50 p-2 rounded">Divisi Kepatuhan Internal</div>
+                <div class="col-span-1 font-semibold">Dari</div>
+                <div class="col-span-5" id="pengirim">: PGS SVP INTERNAL AUDIT</div>
 
-                <div class="md:col-span-1 font-semibold">Penerima</div>
-                <div id="penerima" class="md:col-span-2 bg-gray-50 p-2 rounded">Divisi Operasional</div>
-                
-                <div class="md:col-span-1 font-semibold">Isi Ringkas</div>
-                <div id="isi-ringkas" class="md:col-span-2 bg-gray-50 p-2 rounded h-24">Sehubungan dengan pelaksanaan audit kinerja semester II, bersama ini kami meminta data terkait transaksi periode Januari s.d. Juni 2025.</div>
+                <div class="col-span-1 font-semibold">Lampiran</div>
+                <div class="col-span-5">: 1 (Satu) Berkas</div>
+
+                <div class="col-span-1 font-semibold">Perihal</div>
+                <div class="col-span-5 font-semibold" id="perihal">: Laporan Hasil Audit Implementasi Integrated Operation Access Network (IOAN)</div>
+            </div>
+
+            <div class="mt-8 space-y-4 text-justify">
+                <ol class="list-decimal pl-5 space-y-3">
+                    <li>
+                        <p><strong>Menunjuk:</strong></p>
+                        <ol class="list-alpha pl-6 mt-2 space-y-1">
+                            <li>Internal Audit Charter Nomor SK.01/PW000/TEL-00000000/2024 tanggal 03 Januari 2024 tentang wewenang dan tanggung jawab Internal Audit dalam rangka melaksanakan visi, misi, fungsi dan tugas assurance dan konsultansi;</li>
+                            <li>Surat Keputusan Bersama (SKB) Telkom dengan Anak Perusahaan Terkonsolidasi Nomor Tel.14/PW000/COP-C0300000/2016 tanggal 10 Juni 2016 tentang Forum Sinergi Audit Telkom Group;</li>
+                            <li>Program Kerja Audit Tahunan (PKAT) dan Program Kerja Non Audit Tahunan (PKNAT) Departemen Internal Audit Tahun 2023 Nomor C.Tel.446/PW000/COP-C0000000/ 2022/Rhs tanggal 19 Desember 2022;</li>
+                            <li>Surat Perintah Kerja (SPK) Nomor C.Tel.AM523/010/I/A/PW000/IA-20/2023/Rhs tanggal 9 Maret 2023 tentang Audit Implementasi Integrated Operation Access Network (IOAN).</li>
+                        </ol>
+                    </li>
+                    <li>Sehubungan dengan hal tersebut di atas, kami sampaikan bahwa penugasan Audit Implementasi Integrated Operation Access Network (IOAN) telah selesai dilaksanakan di Divisi Service Operation (DSO), Divisi Wholesale Services (DWS), Divisi Information Technology (DIT), Divisi Infrastructure Development (DID), Telkom Regional (TReg) II, TReg IV, TReg V, Telkom Akses (TA) dan Telkomsel. Penugasan ini dilakukan dengan tujuan untuk meyakini bahwa pelaksanaan provisioning, assurance, dan maintenance layanan Telkom telah berjalan secara efektif dan sesuai dengan ketentuan yang berlaku.</li>
+                    <li>
+                        Berdasarkan hasil penugasan ditemukenali beberapa opportunities for improvement (OFI) yang perlu mendapat perhatian Manajemen, sebagai berikut:
+                        <ol class="list-alpha pl-6 mt-2 space-y-1">
+                            <li>Beberapa dokumen hasil pekerjaan Pasang Sambungan Baru (PSB) skema order based di lokasi uji petik yang diunduh via Aplikasi UT Online dan digunakan sebagai dasar pembuatan Berita Acara Uji Terima tidak sesuai dengan kondisi sebenarnya di lapangan.</li>
+                            <li>Proses pengidentifikasian jenis gangguan Indihome dan pelaksanaan penanganan gangguan belum berjalan secara efektif.</li>
+                            <li>Pelaksanaan pekerjaan maintenance berupa pembenahan jaringan atas ODP dan pekerjaan tangible ODP tidak dapat diyakini telah dilakukan sesuai dengan ketentuan.</li>
+                            <li>Pengelolaan sarana/ alat kerja dan pemenuhan sumber daya manusia (SDM) pada pekerjaan provisioning pasang sambungan baru dan pekerjaan penanganan gangguan, pengawasan, pemeliharaan infrastruktur jaringan akses serta perangkat aktif akses belum sesuai dengan yang diperjanjikan.</li>
+                            <li>Sumber data yang menjadi acuan pada proses rekonsiliasi penggunaan material untuk pekerjaan penanganan gangguan berbeda antar Witel dan tidak dapat diyakini hasil rekonsiliasi tersebut sesuai dengan pengunaan material yang sebenarnya.</li>
+                            <li>Perhitungan prosentase kehadiran SDM sebagai salah satu komponen formula perhitungan imbal jasa SDM tidak sesuai dengan ketentuan dalam kontrak yang berlaku.</li>
+                        </ol>
+                    </li>
+                     <li>
+                        Sehubungan dengan hal tersebut di atas, kami menyampaikan beberapa rekomendasi kepada Manajemen PINS sebagai berikut:
+                        <ol class="list-alpha pl-6 mt-2 space-y-3">
+                            <li>
+                                Mitigasi risiko atas pelaksanaan provisioning PSB yang belum berjalan efektif dan belum sesuai dengan ketentuan yang berlaku, antara lain dengan cara:
+                                <ol class="list-decimal pl-6 mt-2 space-y-2">
+                                    <li>
+                                        DSO agar:
+                                        <ol class="list-alpha pl-6 mt-1 space-y-1">
+                                            <li>Meningkatkan proses supervisi Quality Control (QC) 2 atas pekerjaan provisioning melalui Sosialisasi SOP terkini sesuai perkembangan bisnis proses; (Sudah ditindaklanjuti, closed)</li>
+                                            <li>Pemberian tenda kepada penanggung jawab proses yang terlibat; (Sudah ditindaklanjuti, closed)</li>
+                                            <li>Berkoordinasi dengan DIT untuk kemungkinan mengembangkan kontrol aplikasi pada proses QC 2 guna meningkatkan proses supervisi hasil pekerjaan provisioning oleh teknisi di lapangan sesuai dengan perkembangan bisnis proses.</li>
+                                        </ol>
+                                    </li>
+                                    <li>
+                                        TA agar meningkatkan disiplin operasi para teknisi dan penanggung jawab dalam pelaksanaan provisioning melalui:
+                                        <ol class="list-alpha pl-6 mt-1 space-y-1">
+                                            <li>Peningkatan pengawasan atas pekerjaan di lapangan</li>
+                                            <li>Optimalisasi date-time-map stamp pada setiap foto evidence yang dilaporkan;</li>
+                                            <li>Pembinaan kepada penanggung jawab proses.</li>
+                                        </ol>
+                                    </li>
+                                </ol>
+                            </li>
+                            <li>
+                                Memastikan pengidentifikasian jenis gangguan Indihome dan pelaksanaan penanganan gangguan dijalankan secara efektif, dengan cara:
+                                <ol class="list-decimal pl-6 mt-2 space-y-2">
+                                    <li>
+                                        Telkomsel bersama TA agar:
+                                        <ol class="list-alpha pl-6 mt-1 space-y-1">
+                                            <li>Mengevaluasi mekanisme proses pengidentifikasian jenis gangguan dalam rangka peningkatan akurasi penyelesaian gangguan, termasuk melakukan update mekanisme apabila diperlukan;</li>
+                                            <li>Menambahkan mekanisme proses eskalasi laporan gangguan berulang dalam rentang waktu tertentu pada bisnis proses assurance.</li>
+                                        </ol>
+                                    </li>
+                                    <li>DWS agar melengkapi informasi jenis/ kategori solusi aktual yang telah dilakukan pada data gangguan Aplikasi Nonatero guna membantu tim operasional mengevaluasi dan mengukur performansinya. (Sudah ditindaklanjuti, closed)</li>
+                                </ol>
+                            </li>
+                            <li>Memastikan pembenahan jaringan atas ODP dan pekerjaan tangible ODP dilakukan sesuai dengan ketentuan, dengan cara:
+                                <ol class="list-decimal pl-6 mt-2 space-y-2">
+                                    <li>DSO bersama DIT agar mengevaluasi dan mengembangkan kontrol aplikasi dalam mendukung proses supervisi hasil pekerjaan teknisi di lapangan termasuk mempertimbangkan adanya pelaksanaan aktivitas quality control atas pekerjaan assurance dan maintenance tersebut.</li>
+                                    <li>Divisi Telkom Regional (TReg) agar meningkatkan dan memperketat pelaksanaan supervisi hasil pekerjaan teknisi di lapangan melalui:
+                                        <ol class="list-alpha pl-6 mt-1 space-y-1">
+                                            <li>Penyampaian kembali tugas dan tanggung jawab para penanggung jawab proses;</li>
+                                            <li>Pemanfaatan date-time-map stamp pada setiap evidence yang dilaporkan.</li>
+                                        </ol>
+                                    </li>
+                                    <li>TA agar meningkatkan disiplin operasi para teknisi dalam hal kesesuaian pelaksanaan pekerjaan dengan ketentuan yang berlaku, dengan cara (namun tidak terbatas pada) melakukan sosialisasi kembali terkait SOP.</li>
+                                </ol>
+                            </li>
+                            <li>Mengelola sarana/ alat kerja dan menyediakan sumber daya manusia (SDM) pada pekerjaan provisioning pasang sambungan baru dan pekerjaan penanganan gangguan, pengawasan, pemeliharaan infrastruktur jaringan akses serta perangkat aktif akses sesuai dengan yang diperjanjikan, dengan cara:
+                                <ol class="list-decimal pl-6 mt-2 space-y-2">
+                                    <li>TA bersama TReg agar meningkatkan proses pengecekan kelengkapan alker/ sarker sehingga mengurangi potensi duplikasi pemakaian alker/ sarker oleh tim/ mitra/ sektor berbeda dengan cara namun tidak terbatas pada: inspeksi secara serentak, inventarisasi keseluruhan alker/ sarker, penerapan sanksi kepada mitra yang tidak memenuhi komitmen. (Sudah ditindaklanjuti, closed)</li>
+                                    <li>DSO agar mengevaluasi dan memperbaiki mekanisme proses pengecekan kelengkapan alker/ sarker eksisting sehingga mengurangi adanya potensi duplikasi pemakaian alker/ sarker oleh tim/ mitra/ sektor berbeda.</li>
+                                    <li>TA melakukan perbaikan dalam hal penerapan sanksi kepada mitra untuk meningkatkan komitmen mitra terhadap pemenuhan alker/sarker.</li>
+                                    <li>TA agar meningkatkan validitas data teknisi, melalui:
+                                        <ol class="list-alpha pl-6 mt-1 space-y-1">
+                                            <li>Penetapan mekanisme update/ cleansing data di dashboard Tactical Pro;</li>
+                                            <li>Pelaksanaan rekonsiliasi dan pengecekan secara berkala jumlah teknisi provisioning dan prevensi teknisi. (Sudah ditindaklanjuti, closed)</li>
+                                        </ol>
+                                    </li>
+                                    <li>TA agar memastikan terpenuhinya persyaratan minimal skill set (brevet) tenaga kerja/ teknisi assurance sesuai dengan kebijakan dan Term of Reference (TOR) dalam kontrak IOAN.</li>
+                                    <li>TA agar melaporkan data keseluruhan teknisi kepada Telkom cq DSO untuk dilakukan evaluasi secara periodik termasuk mengenai status sertifikasi seluruh teknisi tersebut.</li>
+                                </ol>
+                            </li>
+                        </ol>
+                    </li>
+                </ol>
             </div>
         </main>
-
-        <!-- Versi I-Frame -->
-        <section class="bg-white p-8 rounded-lg shadow-lg mt-8">
-            <h2 class="text-xl font-semibold border-b pb-2 mb-4">Detail Tambahan (dalam I-Frame)</h2>
-            <p class="text-sm text-gray-600 mb-4">Path untuk i-frame ini relatif terhadap file nde_mockup.html. Karena keduanya ada di folder MOCKUP, path-nya sederhana.</p>
-            <iframe id="lampiran-iframe" src="./nde_iframe_content.html" class="w-full h-48 border rounded-md"></iframe>
-        </section>
-
     </div>
 
 </body>

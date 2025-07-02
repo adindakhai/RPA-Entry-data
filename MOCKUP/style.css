@@ -1,0 +1,44 @@
+/* Panel Informasi Produk */
+#product-info-panel {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 300px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  z-index: 9999; /* Pastikan tampil di atas elemen lain */
+  padding: 15px;
+  font-family: Arial, sans-serif;
+  color: #333;
+}
+
+#product-info-panel h3 {
+  margin-top: 0;
+  color: #e83e8c; /* Warna khas Tokopedia */
+}
+
+#product-info-panel p {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+#product-info-panel strong {
+    color: #555;
+}
+
+#close-panel-btn {
+  background-color: #e83e8c;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  cursor: pointer;
+  border-radius: 4px;
+  margin-top: 10px;
+  float: right;
+}
+
+#close-panel-btn:hover {
+  background-color: #d1307b;
+}
