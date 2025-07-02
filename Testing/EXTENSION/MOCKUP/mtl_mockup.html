@@ -24,26 +24,32 @@
             <form id="mtl-form" class="space-y-6">
                 <div>
                     <label for="input-nomor-nota" class="block text-sm font-medium text-gray-700 mb-1">Nomor Nota</label>
-                    <input type="text" id="input-nomor-nota" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <input type="text" id="input-nomor-nota" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
                 </div>
                 <div>
                     <label for="input-perihal" class="block text-sm font-medium text-gray-700 mb-1">Perihal</label>
-                    <input type="text" id="input-perihal" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <input type="text" id="input-perihal" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
+                <div>
+                    <label for="input-auditee" class="block text-sm font-medium text-gray-700 mb-1">Auditee</label>
+                    <input type="text" id="input-auditee" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
                 </div>
                  <div>
-                    <label for="input-pengirim" class="block text-sm font-medium text-gray-700 mb-1">Asal Nota (Pengirim)</label>
-                    <input type="text" id="input-pengirim" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <label for="input-due-date" class="block text-sm font-medium text-gray-700 mb-1">Due Date Tindak Lanjut</label>
+                    <input type="text" id="input-due-date" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
                 </div>
-                <div>
-                    <label for="input-id-lampiran" class="block text-sm font-medium text-gray-700 mb-1">ID Lampiran</label>
-                    <input type="text" id="input-id-lampiran" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+
+                <div class="space-y-4 border-t pt-6">
+                     <label class="block text-lg font-medium text-gray-800">Rekomendasi / OFI</label>
+                    <div id="rekomendasi-container" class="space-y-2">
+                        </div>
+                    <button type="button" id="add-rekomendasi-btn" class="bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">
+                        + Tambah Rekomendasi
+                    </button>
                 </div>
-                <div>
-                    <label for="input-catatan" class="block text-sm font-medium text-gray-700 mb-1">Catatan Tambahan</label>
-                    <textarea id="input-catatan" rows="4" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
-                </div>
-                <div class="flex justify-end">
-                    <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                
+                <div class="flex justify-end pt-4">
+                    <button type="submit" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700">
                         Simpan ke Database
                     </button>
                 </div>
@@ -51,7 +57,24 @@
         </main>
     </div>
 
-    <!-- Skrip yang menyebabkan error telah dihapus dari sini -->
+    <script>
+        // Script to handle adding new recommendation fields
+        document.addEventListener('DOMContentLoaded', () => {
+            const addBtn = document.getElementById('add-rekomendasi-btn');
+            const container = document.getElementById('rekomendasi-container');
+            let rekomendasiCounter = 0;
+
+            addBtn.addEventListener('click', () => {
+                rekomendasiCounter++;
+                const newTextarea = document.createElement('textarea');
+                newTextarea.id = `rekomendasi-${rekomendasiCounter}`;
+                newTextarea.rows = '3';
+                newTextarea.className = 'w-full p-2 border border-gray-300 rounded-md shadow-sm';
+                newTextarea.placeholder = `Isi rekomendasi #${rekomendasiCounter}`;
+                container.appendChild(newTextarea);
+            });
+        });
+    </script>
     <script src="../content.js"></script>
 
 </body>
