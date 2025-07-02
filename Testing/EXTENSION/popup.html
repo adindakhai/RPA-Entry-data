@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>NDE Helper</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { width: 350px; font-family: sans-serif; }
+    </style>
+</head>
+<body class="p-4 bg-gray-50">
+    <div class="space-y-4">
+        <h1 class="text-lg font-bold text-center text-gray-800">Asisten Data NDE</h1>
+        
+        <!-- Container untuk data yang diambil, awalnya disembunyikan -->
+        <div id="data-display" class="hidden space-y-3">
+            <p class="text-sm text-green-700 font-medium">Data berhasil diambil. Silakan periksa dan edit jika perlu.</p>
+            <div>
+                <label class="text-xs font-semibold text-gray-600">Nomor Nota</label>
+                <input id="popup-nomor-nota" type="text" class="w-full p-1.5 border rounded-md bg-white text-sm">
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-gray-600">Perihal</label>
+                <input id="popup-perihal" type="text" class="w-full p-1.5 border rounded-md bg-white text-sm">
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-gray-600">Pengirim</label>
+                <input id="popup-pengirim" type="text" class="w-full p-1.5 border rounded-md bg-white text-sm">
+            </div>
+            <div>
+                <label class="text-xs font-semibold text-gray-600">ID Lampiran (dari i-frame)</label>
+                <input id="popup-id-lampiran" type="text" class="w-full p-1.5 border rounded-md bg-white text-sm">
+            </div>
+        </div>
+
+        <!-- Container untuk pesan status -->
+        <div id="status-container">
+             <p id="status-initial" class="text-center text-sm text-gray-500">Klik "Ambil Data" di halaman NDE Mockup.</p>
+             <p id="status-error" class="hidden text-center text-sm text-red-600 font-medium"></p>
+        </div>
+
+
+        <div class="flex space-x-2 pt-2">
+            <button id="get-data-btn" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700">
+                Ambil Data
+            </button>
+            <button id="send-data-btn" class="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400" disabled>
+                Kirim ke MTL
+            </button>
+        </div>
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>
