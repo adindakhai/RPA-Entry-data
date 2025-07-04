@@ -185,40 +185,58 @@ document.addEventListener('DOMContentLoaded', () => {
                 temuanNdSvpIa: dataFromNDE.temuanNdSvpIa,
                 rekomendasiNdSvpIa: highlightRekomendasi(dataFromNDE.rekomendasiNdSvpIa)
             };
-            const dataForMTL = {
-                noSpk: extra.noSpk || '',
-                kelompok: '',
-                code: '',
-                masaPenyelesaianPekerjaan: '',
-                matriksProgram: '',
-                tanggalMatriks: '',
-                nomorNdSvpIa: dataFromNDE.nomorNota || '',
-                deskripsiNdSvpIa: dataFromNDE.perihal || '',
-                tanggalNdSvpIa: extra.tanggalNdSvpIa || '',
-                temuanNdSvpIa: extra.temuanNdSvpIa || '',
-                rekomendasiNdSvpIa: extra.rekomendasiNdSvpIa || '',
-                nomorNdDirut: '',
-                deskripsiNdDirut: '',
-                tanggalNdDirut: '',
-                temuanNdDirut: '',
-                rekomendasiNdDirut: '',
-                duedateNdDirut: '',
-                picNdDirut: '',
-                uicNdDirut: '',
+            // Prepare data for IA Telkom, similar to the old dataForMTL structure
+            // but using the fields extracted and available in popup
+            const dataForIATelkom = {
+                noSPK: dataFromNDE.noSpk || '', // from popup-no-spk
+                // kelompok: '', // This was not in popup, will be blank or default in filler
+                // code: '', // This was not in popup
+                // masaPenyelesaianPekerjaan: '', // This was not in popup
+                // matriksProgram: '', // This was not in popup
+                // tanggalMatriks: '', // This was not in popup
+                nomorNdSvpIa: dataFromNDE.nomorNota || '', // from popup-nomor-nota
+                deskripsiNdSvpIa: dataFromNDE.perihal || '', // from popup-perihal
+                tanggalNdSvpIa: dataFromNDE.tanggalNdSvpIa || '', // from popup-tanggal-nd-svp-ia
+                temuanNdSvpIa: dataFromNDE.temuanNdSvpIa || '', // from popup-temuan-nd-svp-ia
+                rekomendasiNdSvpIa: dataFromNDE.rekomendasiNdSvpIa || '', // from popup-rekomendasi-nd-svp-ia
+
+                // These fields are not directly in the popup but were part of the old dataForMTL
+                // They will be blank or need to be sourced if available elsewhere (e.g. from original NDE extraction)
+                // For now, they will be empty or use defaults from the IA Telkom filler if not set
+                nomorNdDirut: n.nomorNdDirut || '',
+                deskripsiNdDirut: n.deskripsiNdDirut || '',
+                tanggalNdDirut: n.tanggalNdDirut || '',
+                temuanNdDirut: n.temuanNdDirut || '',
+                rekomendasiNdDirut: n.rekomendasiNdDirut || '',
+                duedateNdDirut: n.duedateNdDirut || '', // This was in original structure, ensure it's populated if possible
+                picNdDirut: n.picNdDirut || '',
+                uicNdDirut: n.uicNdDirut || '',
+
+                // Status fields, maintain previous logic if available
                 mtlClosed: n.mtlClosed || 0,
                 reschedule: n.reschedule || 0,
                 overdue: n.overdue || 0,
                 onSchedule: n.onSchedule || 0,
-                status: n.status || '',
-                idLampiran: dataFromNDE.idLampiran || '',
+                status: n.status || '', // This will be filled by filler based on other flags if not directly set
+
+                // Other fields from popup
+                // pengirim: dataFromNDE.pengirim || '', // from popup-pengirim - if needed for IA Telkom
+                idLampiran: dataFromNDE.idLampiran || '', // from popup-id-lampiran - if needed for IA Telkom
             };
-            await chrome.storage.local.set({ dataForMTL });
-            const mtlPageUrl = chrome.runtime.getURL('MOCKUP/mtl_mockup.html');
-            await chrome.tabs.create({ url: mtlPageUrl });
+
+            // Store data specifically for IA Telkom page
+            await chrome.storage.local.set({ dataForIATelkom });
+
+            // Construct URL for IA_Telkom.mhtml (assuming it's in MOCKUP folder)
+            // User must ensure "Allow access to file URLs" is enabled for the extension.
+            const iaTelkomPageUrl = chrome.runtime.getURL('MOCKUP/IA_Telkom.mhtml');
+
+            await chrome.tabs.create({ url: iaTelkomPageUrl });
             window.close();
         } catch (error) {
+            console.error('Send to IA Telkom error:', error); // Log specific error
             sendIcon.className = originalIcon;
-            sendText.textContent = originalText;
+            sendText.textContent = originalText; // Restore button text
             sendDataBtn.disabled = false;
             showError('Failed to send data. Please try again.');
             console.error('Send error:', error);
