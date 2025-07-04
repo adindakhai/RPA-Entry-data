@@ -39,7 +39,7 @@
     {
       "resources": [
         "MOCKUP/mtl_mockup.html",
-        "MOCKUP/IA_Telkom.mhtml"
+        "MOCKUP/IA Telkom.mhtml"  // Corrected filename with space
       ],
       "matches": [
         "<all_urls>",
