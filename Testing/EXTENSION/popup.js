@@ -227,15 +227,36 @@ document.addEventListener('DOMContentLoaded', () => {
             // Store data specifically for IA Telkom page
             await chrome.storage.local.set({ dataForIATelkom });
 
-            // Construct URL for IA_Telkom.mhtml (it's in MOCKUP folder, relative to manifest.json)
-            const iaTelkomPageUrl = chrome.runtime.getURL('MOCKUP/IA Telkom.mhtml'); // Corrected path
+            const iaTelkomPageUrl = chrome.runtime.getURL('MOCKUP/IA Telkom.mhtml');
 
-            await chrome.tabs.create({ url: iaTelkomPageUrl });
-            window.close();
+            const newTab = await chrome.tabs.create({ url: iaTelkomPageUrl });
+
+            // Wait for the tab to be completely loaded before trying to inject the script
+            chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
+              if (tabId === newTab.id && info.status === 'complete') {
+                // Remove listener to prevent multiple executions
+                chrome.tabs.onUpdated.removeListener(listener);
+
+                // Execute the filler script
+                chrome.scripting.executeScript({
+                  target: { tabId: newTab.id },
+                  files: ['ia_telkom_filler.js']
+                }, (injectionResults) => {
+                  if (chrome.runtime.lastError) {
+                    console.error('Error injecting script ia_telkom_filler.js:', chrome.runtime.lastError.message);
+                    // Optionally, inform the user via the popup if it's still open or through other means
+                  } else {
+                    console.log('Successfully injected ia_telkom_filler.js.');
+                  }
+                });
+              }
+            });
+
+            window.close(); // Close the popup
         } catch (error) {
-            console.error('Send to IA Telkom error:', error); // Log specific error
+            console.error('Send to IA Telkom error:', error);
             sendIcon.className = originalIcon;
-            sendText.textContent = originalText; // Restore button text
+            sendText.textContent = originalText;
             sendDataBtn.disabled = false;
             showError('Failed to send data. Please try again.');
             console.error('Send error:', error);

@@ -1,8 +1,14 @@
 // content.js - Final Proactive Version
-console.log("Asisten NDE [Penjaga] aktif pada document_start.");
 
-// ===================================================================================
-// BAGIAN 1: PENJAGA SANDBOX (MUTATION OBSERVER)
+// Early exit if running on the extension's own pages (e.g., MOCKUP files)
+if (window.location.protocol === 'chrome-extension:' && window.location.hostname === chrome.runtime.id) {
+    // console.log('Content.js: Detected running on own extension page, exiting to prevent interference.');
+    // No further execution for own pages.
+} else {
+    console.log("Asisten NDE [Penjaga] aktif pada document_start.");
+
+    // ===================================================================================
+    // BAGIAN 1: PENJAGA SANDBOX (MUTATION OBSERVER)
 // Tugasnya: memantau dan menghapus atribut 'sandbox' dari iframe yang baru dibuat.
 // ===================================================================================
 

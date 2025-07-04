@@ -22,6 +22,9 @@
       "matches": [
         "<all_urls>"
       ],
+      "exclude_matches": [
+        "chrome-extension://*/*"
+      ],
       "js": [
         "content.js"
       ],
@@ -36,7 +39,7 @@
     {
       "resources": [
         "MOCKUP/mtl_mockup.html",
-        "MOCKUP/IA Telkom.mhtml"
+        "MOCKUP/IA_Telkom.mhtml"
       ],
       "matches": [
         "<all_urls>",
