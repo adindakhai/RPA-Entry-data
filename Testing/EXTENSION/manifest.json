@@ -30,8 +30,7 @@
     },
     {
       "matches": [
-        "file:///*IA_Telkom.mhtml",
-        "file:///*/IA_Telkom.mhtml"
+        "chrome-extension://*/MOCKUP/IA Telkom.mhtml"
       ],
       "js": [
         "ia_telkom_filler.js"

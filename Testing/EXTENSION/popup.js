@@ -227,9 +227,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Store data specifically for IA Telkom page
             await chrome.storage.local.set({ dataForIATelkom });
 
-            // Construct URL for IA_Telkom.mhtml (assuming it's in MOCKUP folder)
-            // User must ensure "Allow access to file URLs" is enabled for the extension.
-            const iaTelkomPageUrl = chrome.runtime.getURL('MOCKUP/IA_Telkom.mhtml');
+            // Construct URL for IA_Telkom.mhtml (it's in MOCKUP folder, relative to manifest.json)
+            const iaTelkomPageUrl = chrome.runtime.getURL('MOCKUP/IA_Telkom.mhtml'); // Corrected path
 
             await chrome.tabs.create({ url: iaTelkomPageUrl });
             window.close();
