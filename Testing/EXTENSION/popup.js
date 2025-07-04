@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await chrome.storage.local.set({ dataForIATelkom });
 
             // Construct URL for IA_Telkom.mhtml (it's in MOCKUP folder, relative to manifest.json)
-            const iaTelkomPageUrl = chrome.runtime.getURL('MOCKUP/IA_Telkom.mhtml'); // Corrected path
+            const iaTelkomPageUrl = chrome.runtime.getURL('MOCKUP/IA Telkom.mhtml'); // Corrected path
 
             await chrome.tabs.create({ url: iaTelkomPageUrl });
             window.close();
