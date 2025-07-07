@@ -237,42 +237,197 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
     };
 
-    const appVirtualDomInitial = document.querySelector('app-virtualdom');
-    if (appVirtualDomInitial && appVirtualDomInitial.shadowRoot) {
-      console.log("Shadow DOM ditemukan secara langsung.");
-      performExtractionAndSendResponse();
+    // cleanText remains the same as it's generally useful.
+    // getTextFromTable is specific to the shadow DOM structure, so it will be used conditionally.
+
+    // Function to extract data from the new standard HTML structure
+    const extractDataFromStandardHTML = (data) => {
+      console.log("Asisten NDE: Attempting extraction from standard HTML structure.");
+      let success = true; // Assume success unless specific extractions fail to find key elements
+
+      // Nomor Nota (ND SVP IA Nomor)
+      try {
+        const nomorLabel = Array.from(document.querySelectorAll('.grid .col-span-1.font-semibold'))
+                                .find(el => el.textContent.trim() === "Nomor");
+        if (nomorLabel && nomorLabel.nextElementSibling) {
+          const nomorText = nomorLabel.nextElementSibling.textContent.replace(/^:\s*/, '').trim();
+          data.nomorNdSvpIa = cleanText(nomorText);
+        } else {
+          data.nomorNdSvpIa = "Data belum ditemukan";
+          console.warn("Nomor Nota not found in standard HTML.");
+        }
+      } catch (e) { data.nomorNdSvpIa = "Data belum ditemukan"; console.warn("Error extracting Nomor Nota (standard):", e); }
+
+      // Perihal (Deskripsi ND SVP IA)
+      try {
+        const perihalEl = document.getElementById('perihal');
+        if (perihalEl) {
+          data.deskripsiNdSvpIa = cleanText(perihalEl.textContent.replace(/^:\s*/, '').trim());
+        } else {
+          data.deskripsiNdSvpIa = "Data belum ditemukan";
+          console.warn("Perihal not found in standard HTML.");
+        }
+      } catch (e) { data.deskripsiNdSvpIa = "Data belum ditemukan"; console.warn("Error extracting Perihal (standard):", e); }
+      
+      // Dari (Pengirim)
+      try {
+        const pengirimEl = document.getElementById('pengirim');
+        if (pengirimEl) {
+          data.pengirim = cleanText(pengirimEl.textContent.replace(/^:\s*/, '').trim()); // Using 'pengirim' key
+        } else {
+          data.pengirim = "Data belum ditemukan";
+          console.warn("Pengirim not found in standard HTML.");
+        }
+      } catch (e) { data.pengirim = "Data belum ditemukan"; console.warn("Error extracting Pengirim (standard):", e); }
+
+      // Tanggal ND SVP IA (Document Date)
+      try {
+        const dateEl = document.querySelector('main > div.mt-8.text-right');
+        if (dateEl) {
+          const dateText = dateEl.textContent.trim();
+          // Assuming format "Jakarta, 07 Juni 2024" or similar, extract the date part.
+          const dateMatch = dateText.match(/(\d{1,2}\s+\w+\s+\d{4})/);
+          if (dateMatch && dateMatch[1]) {
+            data.tanggalNdSvpIa = cleanText(dateMatch[1]); // Will be like "07 Juni 2024"
+          } else {
+            data.tanggalNdSvpIa = "Data belum ditemukan";
+            console.warn("Tanggal document not found or format mismatch in standard HTML.");
+          }
+        } else {
+          data.tanggalNdSvpIa = "Data belum ditemukan";
+        }
+      } catch (e) { data.tanggalNdSvpIa = "Data belum ditemukan"; console.warn("Error extracting Tanggal Document (standard):", e); }
+
+      // Temuan (OFI)
+      try {
+        let ofiText = "";
+        const ofiHeaderElement = Array.from(document.querySelectorAll('ol.list-decimal > li > p > strong, ol.list-decimal > li'))
+                                     .find(el => el.textContent.includes("opportunities for improvement (OFI)"));
+        if (ofiHeaderElement) {
+            // Find the parent <li> of the OFI header
+            const ofiListItem = ofiHeaderElement.closest('li');
+            if (ofiListItem) {
+                const ofiList = ofiListItem.querySelector('ol.list-alpha');
+                if (ofiList) {
+                    const items = Array.from(ofiList.children)
+                                       .map(li => li.textContent.trim())
+                                       .filter(text => text.length > 0);
+                    ofiText = items.join('\n');
+                }
+            }
+        }
+        data.temuanNdSvpIa = ofiText ? cleanText(ofiText.substring(0, 1000)) : "Data belum ditemukan"; // Increased limit
+        if (!ofiText) console.warn("Temuan (OFI) not found in standard HTML.");
+      } catch (e) { data.temuanNdSvpIa = "Data belum ditemukan"; console.warn("Error extracting Temuan (OFI) (standard):", e); }
+
+      // Rekomendasi
+      try {
+        let rekomendasiText = "";
+        const rekHeaderElement = Array.from(document.querySelectorAll('ol.list-decimal > li > p > strong, ol.list-decimal > li'))
+                                    .find(el => el.textContent.includes("menyampaikan beberapa rekomendasi"));
+        if (rekHeaderElement) {
+            const rekListItem = rekHeaderElement.closest('li');
+            if (rekListItem) {
+                const rekList = rekListItem.querySelector('ol.list-alpha');
+                if (rekList) {
+                    const items = Array.from(rekList.children)
+                                       .map(li => li.textContent.trim()) // Could be more sophisticated to handle nested lists
+                                       .filter(text => text.length > 0);
+                    rekomendasiText = items.join('\n');
+                }
+            }
+        }
+        data.rekomendasiNdSvpIa = rekomendasiText ? cleanText(rekomendasiText.substring(0,1000)) : "Data belum ditemukan"; // Increased limit
+        if(!rekomendasiText) console.warn("Rekomendasi not found in standard HTML.");
+      } catch (e) { data.rekomendasiNdSvpIa = "Data belum ditemukan"; console.warn("Error extracting Rekomendasi (standard):", e); }
+      
+      // For fields not in this HTML, they will retain "Data belum ditemukan"
+      console.log("Asisten NDE: Standard HTML extraction attempt complete.");
+      return success; // For now, always return true if it runs, popup handles "Data belum ditemukan"
+    };
+
+
+    // --- Detection and Execution Logic ---
+    const appVirtualDomElement = document.querySelector('app-virtualdom');
+    const standardHtmlPerihal = document.getElementById('perihal');
+    const standardHtmlPengirim = document.getElementById('pengirim');
+
+    if (appVirtualDomElement && appVirtualDomElement.shadowRoot) {
+        // TYPE 1: Shadow DOM / app-virtualdom based MHTML
+        console.log("Asisten NDE: app-virtualdom with Shadow DOM found. Proceeding with Shadow DOM extraction.");
+        tryExtract(appVirtualDomElement.shadowRoot, extractedData); 
+        console.log("Asisten NDE: Data extracted via Shadow DOM:", extractedData);
+        sendResponse({ data: extractedData, success: true });
+        return true; 
+
+    } else if (standardHtmlPerihal && standardHtmlPengirim) {
+        // TYPE 2: Standard HTML structure (found key elements immediately)
+        console.log("Asisten NDE: Standard HTML structure detected upfront (found #perihal and #pengirim).");
+        extractDataFromStandardHTML(extractedData);
+        console.log("Asisten NDE: Data extracted via Standard HTML (upfront):", extractedData);
+        sendResponse({ data: extractedData, success: true });
+        return true; 
+
     } else {
-      console.log("app-virtualdom tidak langsung ditemukan, menyiapkan MutationObserver.");
-      let observationTimeout = null;
+        // Fallback: Neither structure found immediately.
+        // This path will primarily observe for late-appearing app-virtualdom.
+        // If app-virtualdom doesn't appear by timeout, it will then try standard HTML parsing as a last resort.
+        console.log("Asisten NDE: Key markers for either structure not immediately found. Setting up MutationObserver for late-appearing app-virtualdom.");
+        let observer = null;
+        let observationTimeout = null;
 
-      observer = new MutationObserver((mutationsList, obs) => {
-        const appVirtualDomObserved = document.querySelector('app-virtualdom');
-        if (appVirtualDomObserved && appVirtualDomObserved.shadowRoot) {
-          console.log("app-virtualdom terdeteksi oleh MutationObserver.");
-          if (observationTimeout) clearTimeout(observationTimeout);
-          obs.disconnect(); 
-          observer = null; 
-          console.log("MutationObserver dihentikan setelah elemen ditemukan.");
-          performExtractionAndSendResponse();
-        }
-      });
+        const finalizeExtractionAfterObserver = (appVirtualDomWasFound) => {
+            if (!appVirtualDomWasFound) {
+                // If app-virtualdom was NOT found by the observer/timeout, attempt standard HTML extraction.
+                console.log("Asisten NDE: app-virtualdom not found by observer/timeout. Attempting standard HTML extraction as final fallback.");
+                extractDataFromStandardHTML(extractedData);
+            }
+            // else if appVirtualDomWasFound, tryExtract would have already populated extractedData.
 
-      observer.observe(document.body, { childList: true, subtree: true });
-      console.log("MutationObserver aktif.");
+            const wasAnythingExtracted = Object.values(extractedData).some(
+                val => val !== "Data belum ditemukan" && val !== "" && val !== 0 && val !== undefined && val !== null
+            );
 
-      observationTimeout = setTimeout(() => {
-        if (observer) { 
-          console.warn("Batas waktu MutationObserver (5s) tercapai, app-virtualdom masih tidak siap.");
-          observer.disconnect();
-          observer = null;
-          console.log("MutationObserver dihentikan karena timeout.");
-          sendResponse({ data: extractedData, success: false, message: "Timeout waiting for target element." });
-        }
-      }, 5000); 
+            if (wasAnythingExtracted) {
+                console.log("Asisten NDE: Final extracted data after observer/fallback:", extractedData);
+                sendResponse({ data: extractedData, success: true });
+            } else {
+                console.warn("Asisten NDE: No data extracted after all attempts (observer and fallback standard parse).");
+                sendResponse({ 
+                    data: extractedData, 
+                    success: false, 
+                    message: "Could not identify document structure or extract data after all attempts (20s)." 
+                });
+            }
+        };
+      
+        observer = new MutationObserver((mutationsList, obs) => {
+            const avdElementObserved = document.querySelector('app-virtualdom');
+            if (avdElementObserved && avdElementObserved.shadowRoot) {
+                console.log("Asisten NDE: app-virtualdom detected by MutationObserver.");
+                if (observationTimeout) clearTimeout(observationTimeout);
+                obs.disconnect(); 
+                observer = null; 
+                tryExtract(avdElementObserved.shadowRoot, extractedData); // Populate data
+                finalizeExtractionAfterObserver(true); // Indicate app-virtualdom was found
+            }
+        });
 
-      return true; 
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+        console.log("Asisten NDE: MutationObserver for app-virtualdom active.");
+
+        observationTimeout = setTimeout(() => {
+            if (observer) { // If observer is still active, it means app-virtualdom wasn't found
+                console.warn("Asisten NDE: MutationObserver timeout (20s) reached for app-virtualdom.");
+                observer.disconnect();
+                observer = null;
+                finalizeExtractionAfterObserver(false); // Indicate app-virtualdom was NOT found
+            }
+        }, 20000); 
+
+        return true; // Indicates async response for the observer path
     }
-    return true; 
+    // Note: The final 'return true;' from the original code was removed as each path should handle its own sendResponse or async indication.
   }
 });
 

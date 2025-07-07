@@ -5,7 +5,8 @@
   "description": "Membantu memindahkan data dari NDE ke MTL secara otomatis.",
   "permissions": [
     "storage",
-    "activeTab"
+    "activeTab",
+    "tabs"
   ],
   "host_permissions": [
     "file:///*",
@@ -26,7 +27,17 @@
         "content.js"
       ],
       "all_frames": true,
-      "run_at": "document_start"  
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "file:///*IA%20Telkom.mhtml",
+        "file:///*IA Telkom.mhtml"
+      ],
+      "js": [
+        "ia_telkom_filler.js"
+      ],
+      "run_at": "document_idle"
     }
   ],
   "icons": {

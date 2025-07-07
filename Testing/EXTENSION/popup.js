@@ -161,69 +161,218 @@ document.addEventListener('DOMContentLoaded', () => {
         const sendText = sendDataBtn.querySelector('span');
         const originalIcon = sendIcon.className;
         const originalText = sendText.textContent;
+
         sendIcon.className = 'fas fa-spinner animate-spin text-sm';
         sendText.textContent = 'Sending...';
         sendDataBtn.disabled = true;
+        showError(''); // Clear previous errors
+
         try {
-            const dataFromNDE = {
-                nomorNota: nomorNotaInput.value,
-                perihal: perihalInput.value,
-                pengirim: pengirimInput.value,
-                idLampiran: idLampiranInput.value,
-                noSpk: noSpkInput.value,
-                tanggalNdSvpIa: tanggalNdSvpIaInput.value,
-                temuanNdSvpIa: temuanNdSvpIaInput.value,
-                rekomendasiNdSvpIa: rekomendasiNdSvpIaInput.value,
-            };
-            const { dataForMTL: lastData } = await new Promise(resolve => {
-                chrome.storage.local.get('dataForMTL', resolve);
-            });
-            const n = lastData || {};
-            const extra = {
-                noSpk: dataFromNDE.noSpk,
-                tanggalNdSvpIa: dataFromNDE.tanggalNdSvpIa,
-                temuanNdSvpIa: dataFromNDE.temuanNdSvpIa,
-                rekomendasiNdSvpIa: highlightRekomendasi(dataFromNDE.rekomendasiNdSvpIa)
-            };
+            // Retrieve fully extracted data from content script, stored temporarily in local storage
+            // This ensures we use the most complete data set from content.js
+            const result = await chrome.storage.local.get('ndeToMtlExtractedData');
+            const extractedDataFromContent = result.ndeToMtlExtractedData;
+
+            if (!extractedDataFromContent) {
+                showError('No extracted NDE data found. Please extract data first.');
+                sendIcon.className = originalIcon;
+                sendText.textContent = originalText;
+                sendDataBtn.disabled = false;
+                return;
+            }
+
+            // Prepare data for MTL, combining popup values (user edits) with content script extractions
             const dataForMTL = {
-                noSpk: extra.noSpk || '',
-                kelompok: '',
-                code: '',
-                masaPenyelesaianPekerjaan: '',
-                matriksProgram: '',
-                tanggalMatriks: '',
-                nomorNdSvpIa: dataFromNDE.nomorNota || '',
-                deskripsiNdSvpIa: dataFromNDE.perihal || '',
-                tanggalNdSvpIa: extra.tanggalNdSvpIa || '',
-                temuanNdSvpIa: extra.temuanNdSvpIa || '',
-                rekomendasiNdSvpIa: extra.rekomendasiNdSvpIa || '',
-                nomorNdDirut: '',
-                deskripsiNdDirut: '',
-                tanggalNdDirut: '',
-                temuanNdDirut: '',
-                rekomendasiNdDirut: '',
-                duedateNdDirut: '',
-                picNdDirut: '',
-                uicNdDirut: '',
-                mtlClosed: n.mtlClosed || 0,
-                reschedule: n.reschedule || 0,
-                overdue: n.overdue || 0,
-                onSchedule: n.onSchedule || 0,
-                status: n.status || '',
-                idLampiran: dataFromNDE.idLampiran || '',
+                // Fields from the user's list for IA Telkom.mhtml
+                no_spk: noSpkInput.value || extractedDataFromContent.noSPK || '',
+                kelompok: extractedDataFromContent.kelompok || 'Information Technology Audit', // Default or from content
+                CODE: extractedDataFromContent.code || '', // From content if available
+                // Masa_Penyelesaian_Pekerjaan1_Entry_form is disabled, so we don't try to set it.
+                // It's in extractedDataFromContent.masaPenyelesaianPekerjaan if needed elsewhere.
+                Matriks_Program: extractedDataFromContent.matriksProgram || '', // From content if available
+                Matriks_Tgl: extractedDataFromContent.tanggalMatriks || '', // From content if available
+
+                ND_SVP_IA_Nomor: nomorNotaInput.value || extractedDataFromContent.nomorNdSvpIa || '',
+                Desc_ND_SVP_IA: perihalInput.value || extractedDataFromContent.deskripsiNdSvpIa || '',
+                ND_SVP_IA_Tanggal: tanggalNdSvpIaInput.value || extractedDataFromContent.tanggalNdSvpIa || '',
+                ND_SVP_IA_Temuan: temuanNdSvpIaInput.value || extractedDataFromContent.temuanNdSvpIa || '',
+                ND_SVP_IA_Rekomendasi: rekomendasiNdSvpIaInput.value || extractedDataFromContent.rekomendasiNdSvpIa || '',
+
+                ND_Dirut_Nomor: extractedDataFromContent.nomorNdDirut || '',
+                Desc_ND_Dirut: extractedDataFromContent.deskripsiNdDirut || '',
+                ND_Dirut_Tgl: extractedDataFromContent.tanggalNdDirut || '',
+                ND_Dirut_Temuan: extractedDataFromContent.temuanNdDirut || '',
+                ND_Dirut_Rekomendasi: extractedDataFromContent.rekomendasiNdDirut || '',
+
+                // Assuming Duedate ND Dirut might be split into two fields as per user's doc
+                // For now, using a single field; filler script might need to adapt
+                ND_Dirut_Duedate1: extractedDataFromContent.duedateNdDirut || '',
+                ND_Dirut_Duedate2: '', // If there's a second part
+
+                ND_Dirut_PIC: extractedDataFromContent.picNdDirut || '',
+                ND_Dirut_UIC: extractedDataFromContent.uicNdDirut || '',
+
+                // These seem to be status counters/values, default to 0 or empty if not in NDE
+                MTL_Closed: extractedDataFromContent.mtlClosed || 0,
+                Reschedule: extractedDataFromContent.reschedule || 0,
+                Overdue: extractedDataFromContent.overdue || 0,
+                OnSchedule: extractedDataFromContent.onSchedule === undefined ? 1 : extractedDataFromContent.onSchedule, // Default to 1 if not present
+                Status: extractedDataFromContent.status || 'OnSchedule', // Default
+
+                // Fields from popup that might not directly map or are supplemental
+                idLampiran: idLampiranInput.value || extractedDataFromContent.idLampiran || '',
+                pengirim: pengirimInput.value || extractedDataFromContent.pengirim || '',
+                // Add other fields from extractedDataFromContent if they have a target in IA Telkom.mhtml
+                masaPenyelesaianPekerjaan: extractedDataFromContent.masaPenyelesaianPekerjaan || '',
+
             };
-            await chrome.storage.local.set({ dataForMTL });
-            const mtlPageUrl = chrome.runtime.getURL('MOCKUP/mtl_mockup.html');
-            await chrome.tabs.create({ url: mtlPageUrl });
-            window.close();
+
+            console.log("[popup.js] Prepared dataForMTL:", dataForMTL);
+
+            // Query for IA Telkom.mhtml tab
+            chrome.tabs.query({ url: "file:///*" }, (tabs) => {
+                const mtlTabs = tabs.filter(tab => {
+                    if (tab.url) {
+                        const lowerUrl = tab.url.toLowerCase();
+                        // Check for "ia telkom.mhtml" or "ia%20telkom.mhtml" case-insensitively
+                        return lowerUrl.includes("ia telkom.mhtml") || lowerUrl.includes("ia%20telkom.mhtml");
+                    }
+                    return false;
+                });
+
+                if (mtlTabs.length > 0) {
+                    const targetTab = mtlTabs[0]; // Use the first match
+                    chrome.tabs.update(targetTab.id, { active: true });
+                    // Send a message to the content script in that tab
+                    chrome.tabs.sendMessage(targetTab.id, {
+                        action: "fillMTLForm",
+                        data: dataForMTL
+                    }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            showError(`Could not connect to IA Telkom.mhtml. Ensure it's open and the extension has file access. Error: ${chrome.runtime.lastError.message}`);
+                            console.error("Error sending message to ia_telkom_filler.js:", chrome.runtime.lastError.message);
+                        } else if (response && response.success) {
+                            showError(''); // Clear error
+                            sendText.textContent = 'Data Sent!';
+                            // Optionally close popup after a delay or keep it open
+                            // setTimeout(() => window.close(), 2000);
+                        } else {
+                            showError(response ? response.message : 'Failed to get confirmation from IA Telkom.mhtml.');
+                        }
+                        sendIcon.className = originalIcon; // Reset icon
+                        // sendDataBtn.disabled = false; // Re-enable button only if we don't close
+                    });
+                } else {
+                    showError('File \'C:\\\\Users\\\\khair\\\\Downloads\\\\IA Telkom.mhtml\' is not open. Please open this file in a Chrome tab and try again.');
+                    sendIcon.className = originalIcon;
+                    sendText.textContent = originalText;
+                    sendDataBtn.disabled = false;
+                }
+            });
+
         } catch (error) {
             sendIcon.className = originalIcon;
             sendText.textContent = originalText;
             sendDataBtn.disabled = false;
-            showError('Failed to send data. Please try again.');
+            showError('Failed to send data. Please try again. Error: ' + error.message);
             console.error('Send error:', error);
         }
+        // Not closing window.close(); immediately to allow user to see status/error.
     });
+
+    // Store data from content.js into chrome.storage.local when received
+    // This is a new listener to capture the full data set from content.js
+    // Assumes content.js will send a message like { action: "storeExtractedData", data: extractedData }
+    // However, current content.js sends data back to popup directly.
+    // Modifying getDataBtn listener to store this data.
+
+    // Modify existing getDataBtn's response handler
+    const originalGetDataResponseHandler = async (response) => {
+        showLoading(false);
+        if (chrome.runtime.lastError) {
+            showError('Failed to connect to page. Please ensure "Allow access to file URLs" is enabled for this extension and refresh the NDE page.');
+            console.error("[popup.js] sendMessage lastError:", chrome.runtime.lastError.message);
+            return;
+        }
+
+        if (response && response.success && response.data) {
+            console.log("[popup.js] Data diterima dari content.js:", response.data);
+
+            // Store the complete extracted data for sendDataBtn to use
+            await chrome.storage.local.set({ ndeToMtlExtractedData: response.data });
+
+            const {
+                noSPK,
+                // masaPenyelesaianPekerjaan, // Not directly on popup
+                nomorNdSvpIa,
+                deskripsiNdSvpIa,
+                tanggalNdSvpIa,
+                temuanNdSvpIa,
+                rekomendasiNdSvpIa
+            } = response.data;
+
+            if (nomorNotaInput) nomorNotaInput.value = (nomorNdSvpIa && nomorNdSvpIa !== "Data belum ditemukan") ? nomorNdSvpIa : "";
+            if (perihalInput) perihalInput.value = (deskripsiNdSvpIa && deskripsiNdSvpIa !== "Data belum ditemukan") ? deskripsiNdSvpIa : "";
+            if (noSpkInput) noSpkInput.value = (noSPK && noSPK !== "Data belum ditemukan") ? noSPK : "";
+            if (tanggalNdSvpIaInput) tanggalNdSvpIaInput.value = (tanggalNdSvpIa && tanggalNdSvpIa !== "Data belum ditemukan") ? tanggalNdSvpIa : "";
+            if (temuanNdSvpIaInput) temuanNdSvpIaInput.value = (temuanNdSvpIa && temuanNdSvpIa !== "Data belum ditemukan") ? temuanNdSvpIa : "";
+
+            if (rekomendasiNdSvpIaInput) {
+                const recText = (rekomendasiNdSvpIa && rekomendasiNdSvpIa !== "Data belum ditemukan") ? rekomendasiNdSvpIa : "";
+                rekomendasiNdSvpIaInput.value = highlightRekomendasi(recText); // Keep existing highlighting
+            }
+
+            // Also populate other fields if they exist in the popup and are in response.data
+            // Example:
+            // if (pengirimInput && response.data.pengirim) pengirimInput.value = response.data.pengirim;
+            // if (idLampiranInput && response.data.idLampiran) idLampiranInput.value = response.data.idLampiran;
+
+
+            const hasSignificantData = (nomorNdSvpIa && nomorNdSvpIa !== "Data belum ditemukan") ||
+                                       (deskripsiNdSvpIa && deskripsiNdSvpIa !== "Data belum ditemukan");
+
+            if (hasSignificantData) {
+                showForm();
+            } else {
+                showForm();
+            }
+
+        } else if (response && !response.success) {
+            showError(response.message || 'Failed to extract data from page. Content script reported an issue.');
+            console.warn('[popup.js] Pesan error dari content.js:', response.message);
+        } else {
+            showError('No response or invalid data from page. Please try refreshing the NDE page and the extension.');
+            console.warn('[popup.js] Respons tidak valid atau tidak ada:', response);
+        }
+    };
+
+    // Detach original listener and attach new one if necessary, or modify it
+    // For simplicity, I'm assuming this is the only place `getDataFromNDE` response is handled.
+    // The original `getDataBtn` listener now calls `originalGetDataResponseHandler`
+    getDataBtn.removeEventListener('click', getDataBtn.fn); // Need to store original fn if this approach is taken elsewhere
+    getDataBtn.addEventListener('click', async () => {
+        showLoading(true);
+        try {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            const allowed = (
+                tab.url.includes('nde_mockup.html') ||
+                tab.url.toLowerCase().endsWith('.mhtml') ||
+                tab.url.toLowerCase().includes('notadinas')
+            );
+            if (!allowed) {
+                showLoading(false);
+                showError('Please open a supported NDE or Notadinas file!');
+                return;
+            }
+            // The response from sendMessage will be handled by originalGetDataResponseHandler
+            chrome.tabs.sendMessage(tab.id, { action: "getDataFromNDE" }, originalGetDataResponseHandler);
+        } catch (error) {
+            showLoading(false);
+            showError('An unexpected error occurred. Please try again.');
+            console.error('Error:', error);
+        }
+    });
+
 
     // On load, show only the Extract Data button (form and error hidden)
     dataDisplayDiv.style.display = 'none';
