@@ -34,6 +34,10 @@ function fillFormFields(data) {
 
         const element = document.querySelector(selector);
         if (element) {
+            // JULES: Log element visibility (basic check)
+            const isVisible = !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
+            console.log(`[ia_telkom_filler.js] Element for "${fieldName}" (selector: ${selector}) found. Visible (approx): ${isVisible}`);
+
             let processedValue = value;
             // Check if the field is a 'Temuan' or 'Rekomendasi' field and if the value is an array
             if ((fieldName.toLowerCase().includes('temuan') || fieldName.toLowerCase().includes('rekomendasi')) && Array.isArray(value)) {
@@ -41,8 +45,13 @@ function fillFormFields(data) {
                 console.log(`[ia_telkom_filler.js] Formatted array for "${fieldName}" to bulleted list.`);
             }
 
-
-            if (element.type === 'date') {
+            // JULES: Handle potential checkboxes by ID
+            const checkboxIds = ["#closeinput", "#rescheduleinput", "#overdueinput", "#onscheduleinput"];
+            if (checkboxIds.includes(selector.toLowerCase()) && (element.type === 'checkbox' || element.type === 'radio')) { // Added radio just in case
+                const checkedValue = String(processedValue).toLowerCase();
+                element.checked = checkedValue === "1" || checkedValue === "true";
+                console.log(`[ia_telkom_filler.js] Set checkbox/radio "${fieldName}" (selector: ${selector}) to checked: ${element.checked} (based on value: "${processedValue}")`);
+            } else if (element.type === 'date') {
                 if (processedValue === '' || /^\d{4}-\d{2}-\d{2}$/.test(processedValue)) {
                     element.value = processedValue;
                 } else {
@@ -51,7 +60,7 @@ function fillFormFields(data) {
                     allFieldsFound = false;
                     return;
                 }
-            } else if (type === 'select') {
+            } else if (type === 'select' || element.nodeName.toLowerCase() === 'select') { // Check nodeName as well for select
                 let optionFound = false;
                 for (let i = 0; i < element.options.length; i++) {
                     if (element.options[i].value === String(processedValue) || element.options[i].text === String(processedValue)) {
@@ -69,7 +78,10 @@ function fillFormFields(data) {
 
             element.dispatchEvent(new Event('input', { bubbles: true }));
             element.dispatchEvent(new Event('change', { bubbles: true }));
-            console.log(`[ia_telkom_filler.js] Set "${fieldName}" (selector: ${selector}) to (processed): "${processedValue}"`);
+            // JULES: For non-checkboxes, the log message is slightly different now due to checkbox handling above
+            if (!(checkboxIds.includes(selector.toLowerCase()) && (element.type === 'checkbox' || element.type === 'radio'))) {
+                 console.log(`[ia_telkom_filler.js] Set "${fieldName}" (selector: ${selector}) to (processed): "${processedValue}"`);
+            }
         } else {
             console.warn(`[ia_telkom_filler.js] Element with selector "${selector}" for field "${fieldName}" not found.`);
             if (value !== "" && value !== undefined && value !== null && value !== "Data belum ditemukan") {

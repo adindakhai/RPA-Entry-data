@@ -287,6 +287,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // However, the original code sent it, so keeping it for now.
             // if (!dataForMTL.masaPenyelesaianPekerjaan) delete dataForMTL.masaPenyelesaianPekerjaan;
 
+            // ############# JULES: ADDED DETAILED LOG #############
+            console.log("[popup.js] --- BEGINNING OF DATA FOR MTL ---");
+            console.log("[popup.js] Data being sent to ia_telkom_filler.js:", JSON.stringify(dataForMTL, null, 2));
+            console.log("[popup.js] --- END OF DATA FOR MTL ---");
+            // ############# JULES: END OF ADDED LOG #############
 
             console.log("[popup.js] Prepared dataForMTL:", dataForMTL);
 
