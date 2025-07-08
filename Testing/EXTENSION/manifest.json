@@ -46,7 +46,12 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "MOCKUP/mtl_mockup.html"
+        "MOCKUP/mtl_mockup.html",
+        "popup.html",
+        "popup.js",
+        "popup.css",
+        "tailwind.css",
+        "icons/icon128.png"
       ],
       "matches": [
         "<all_urls>"
