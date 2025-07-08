@@ -257,50 +257,91 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       // No SPK (already good, uses spkRegex)
       // Masa Penyelesaian Pekerjaan (already good, uses masaRegex)
       // Temuan ND SVP IA (already good, uses ofiKeywords and ofiRegex)
-      // Temuan ND SVP IA (OFI) and linked Rekomendasi ND SVP IA
+      // Revised Structural Extraction for OFI (Temuan) and Rekomendasi ND SVP IA
       try {
-        const ofiKeywords = ["opportunity for improvement", "ofi", "temuan"];
-        // Refined ofiRegex to also look for "kami menyampaikan rekomendasi" as a potential end delimiter for OFI.
-        const ofiRegex = new RegExp(`(?:${ofiKeywords.join('|')})\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:rekomendasi[:\\s\\n]|kami menyampaikan rekomendasi|\\n\\n[\\w\\s]{20,}|\Z))`, "i");
-        const ofiMatch = fullTextContent.match(ofiRegex);
+        const lowerFullText = fullTextContent.toLowerCase(); // Use lowercased version for index finding
 
-        if (ofiMatch && ofiMatch[1] && ofiMatch[1].trim().length > 5) { // Min length for OFI text
-            data.temuanNdSvpIa = cleanText(ofiMatch[1].substring(0, 500));
+        const ofiStartMarkers = ["opportunity for improvement", "ofi:", "temuan:", "temuan kami", "kelemahan-kelemahan yang kami temukan", "kelemahan yang kami temukan"];
+        const rekomendasiStartMarkers = ["rekomendasi:", "kami menyampaikan rekomendasi", "saran perbaikan:", "rekomendasi kami"];
+        // Added more diverse and specific next section markers
+        const nextSectionMarkers = [
+            "tindak lanjut", "action plan", "pic:", "uic:", "due date:", "duedate:",
+            "demikian nota dinas ini", "demikian kami sampaikan", "atas perhatian dan kerja sama", "atas perhatiannya",
+            "menyetujui", "mengetahui", "dibuat di", "jakarta,", "bandung,", // Common closing locations/phrases
+            "manager", "general manager", "svp", "evp", "direktur", // Signatory titles often mark end of content
+            "lampiran", "cc:" // Common footer sections
+        ];
 
-            // Search for Rekomendasi *after* this OFI match
-            // Ensure ofiMatch.index and ofiMatch[0].length are valid before substring
-            const startIndexForRekomendasi = (ofiMatch.index !== undefined && ofiMatch[0] !== undefined) ? ofiMatch.index + ofiMatch[0].length : -1;
+        let ofiStartIndex = -1, ofiMarkerLength = 0;
+        let rekomendasiStartIndex = -1, rekomendasiMarkerLength = 0;
+        let endOfRekomendasiIndex = lowerFullText.length; // Default to end of document
 
-            if (startIndexForRekomendasi !== -1 && startIndexForRekomendasi < fullTextContent.length) {
-                const textAfterOFI = fullTextContent.substring(startIndexForRekomendasi);
-                const rekomendasiKeywords = ["rekomendasi", "kami menyampaikan rekomendasi"];
-                // Regex for Rekomendasi: starts with keyword (possibly at beginning of line), then captures content
-                const rekRegex = new RegExp(`(?:^|\\n)\\s*(?:${rekomendasiKeywords.join('|')})\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:tindak\\s+lanjut|penutup|hormat kami|demikian|\\n\\n[\\w\\s]{20,}|\Z))`, "i");
-                const rekomendasiMatchInFollowingText = textAfterOFI.match(rekRegex);
-
-                if (rekomendasiMatchInFollowingText && rekomendasiMatchInFollowingText[1] && rekomendasiMatchInFollowingText[1].trim()) {
-                    data.rekomendasiNdSvpIa = cleanText(rekomendasiMatchInFollowingText[1].substring(0, 500));
-                } else {
-                    console.log("[content.js] Rekomendasi ND SVP IA not found immediately after OFI section using specific keywords.");
-                }
-            } else {
-                 console.log("[content.js] Invalid start index for Rekomendasi search after OFI.");
-            }
-        } else {
-            console.log("[content.js] OFI section not clearly identified, skipping linked Rekomendasi ND SVP IA search.");
-            // Fallback: If OFI wasn't found with the above, try a more general Rekomendasi search if temuan is still empty
-            // This retains some of the older broader search if the strict OFI->Rek linkage fails.
-            if (data.temuanNdSvpIa === "Data belum ditemukan" && data.rekomendasiNdSvpIa === "Data belum ditemukan") {
-                const standaloneRekSvpIaKeywords = ["rekomendasi", "kami menyampaikan rekomendasi"];
-                const standaloneRekSvpIaRegex = new RegExp(`(?:${standaloneRekSvpIaKeywords.join('\\s*[:\\n\\s.-]*|')}\\s*)([\\s\\S]*?)(?=(?:tindak\\s+lanjut|penutup|hormat kami|demikian|\\n\\n[\\w\\s]{20,}|\Z))`, "i");
-                const standaloneRekMatch = fullTextContent.match(standaloneRekSvpIaRegex);
-                if (standaloneRekMatch && standaloneRekMatch[1] && standaloneRekMatch[1].trim()) {
-                  data.rekomendasiNdSvpIa = cleanText(standaloneRekMatch[1].substring(0, 500));
-                  console.log("[content.js] Found Rekomendasi ND SVP IA using standalone search.");
-                }
+        // Find OFI start
+        for (const marker of ofiStartMarkers) {
+            const idx = lowerFullText.indexOf(marker.toLowerCase());
+            if (idx !== -1) {
+                ofiStartIndex = idx;
+                ofiMarkerLength = marker.length;
+                // Optional: advance ofiStartIndex past initial descriptive part if marker is broad like "temuan"
+                // Example: if marker is "temuan", advance past "temuan:" or "temuan kami adalah:"
+                const textAfterMarker = lowerFullText.substring(idx + marker.length);
+                const colonOrNewlineMatch = textAfterMarker.match(/^[\s:.-]*\n?/);
+                if(colonOrNewlineMatch) ofiMarkerLength += colonOrNewlineMatch[0].length;
+                break;
             }
         }
-      } catch (e) { console.warn("Error ekstraksi Temuan ND SVP IA (OFI) or linked Rekomendasi:", e); }
+
+        // Find Rekomendasi start (must be after OFI start if OFI found)
+        const searchStartForRekomendasi = (ofiStartIndex !== -1) ? ofiStartIndex + ofiMarkerLength : 0;
+        for (const marker of rekomendasiStartMarkers) {
+            const idx = lowerFullText.indexOf(marker.toLowerCase(), searchStartForRekomendasi);
+            if (idx !== -1) {
+                rekomendasiStartIndex = idx;
+                rekomendasiMarkerLength = marker.length;
+                const textAfterMarker = lowerFullText.substring(idx + marker.length);
+                const colonOrNewlineMatch = textAfterMarker.match(/^[\s:.-]*\n?/);
+                if(colonOrNewlineMatch) rekomendasiMarkerLength += colonOrNewlineMatch[0].length;
+                break;
+            }
+        }
+
+        // Find end of Rekomendasi section (start of the next major section or end of doc)
+        // Search for these markers only after where Rekomendasi would have started
+        const searchStartForNextSection = (rekomendasiStartIndex !== -1) ? rekomendasiStartIndex + rekomendasiMarkerLength : searchStartForRekomendasi;
+        for (const marker of nextSectionMarkers) {
+            const idx = lowerFullText.indexOf(marker.toLowerCase(), searchStartForNextSection);
+            if (idx !== -1 && idx < endOfRekomendasiIndex) {
+                endOfRekomendasiIndex = idx;
+            }
+        }
+
+        // Extract OFI text
+        if (ofiStartIndex !== -1) {
+            const ofiEndIndex = (rekomendasiStartIndex !== -1 && rekomendasiStartIndex > ofiStartIndex) ? rekomendasiStartIndex : endOfRekomendasiIndex;
+            let ofiText = fullTextContent.substring(ofiStartIndex + ofiMarkerLength, ofiEndIndex);
+            // Remove common instruction/preamble for recommendations if it got included in OFI
+            for (const recMarker of rekomendasiStartMarkers) {
+                const recMarkerInOFI = ofiText.toLowerCase().indexOf(recMarker.toLowerCase());
+                if (recMarkerInOFI !== -1) {
+                    ofiText = ofiText.substring(0, recMarkerInOFI);
+                }
+            }
+            data.temuanNdSvpIa = cleanText(ofiText); // No 500 char limit
+            console.log(`[content.js] OFI Extracted (len: ${data.temuanNdSvpIa.length}): "${data.temuanNdSvpIa.substring(0,100)}..."`);
+        } else {
+            console.log("[content.js] OFI start markers not found.");
+        }
+
+        // Extract Rekomendasi text
+        if (rekomendasiStartIndex !== -1) {
+            let rekomendasiText = fullTextContent.substring(rekomendasiStartIndex + rekomendasiMarkerLength, endOfRekomendasiIndex);
+            data.rekomendasiNdSvpIa = cleanText(rekomendasiText); // No 500 char limit
+            console.log(`[content.js] Rekomendasi Extracted (len: ${data.rekomendasiNdSvpIa.length}): "${data.rekomendasiNdSvpIa.substring(0,100)}..."`);
+        } else {
+            console.log("[content.js] Rekomendasi start markers not found after OFI (or at all).");
+        }
+
+      } catch (e) { console.warn("Error during structural OFI/Rekomendasi extraction:", e); }
 
       // CODE
       try {
@@ -669,7 +710,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 }
             }
         }
-        data.temuanNdSvpIa = ofiText ? cleanText(ofiText.substring(0, 1000)) : "Data belum ditemukan"; // Increased limit
+            data.temuanNdSvpIa = ofiText ? cleanText(ofiText) : "Data belum ditemukan"; // Removed 1000 char limit
         if (!ofiText) console.warn("Temuan (OFI) not found in standard HTML.");
       } catch (e) { data.temuanNdSvpIa = "Data belum ditemukan"; console.warn("Error extracting Temuan (OFI) (standard):", e); }
 
@@ -690,7 +731,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 }
             }
         }
-        data.rekomendasiNdSvpIa = rekomendasiText ? cleanText(rekomendasiText.substring(0,1000)) : "Data belum ditemukan"; // Increased limit
+            data.rekomendasiNdSvpIa = rekomendasiText ? cleanText(rekomendasiText) : "Data belum ditemukan"; // Removed 1000 char limit
         if(!rekomendasiText) console.warn("Rekomendasi not found in standard HTML.");
       } catch (e) { data.rekomendasiNdSvpIa = "Data belum ditemukan"; console.warn("Error extracting Rekomendasi (standard):", e); }
       
