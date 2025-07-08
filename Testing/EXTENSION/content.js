@@ -221,12 +221,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
       // Nomor ND SVP IA (refined - already uses getTextFromTable, but if not found, try keywords)
       if (data.nomorNdSvpIa === "Data belum ditemukan") {
-        const nomorKeywords = ["nomor nd", "nota dinas", "no."]; // Removed "nomor" alone to avoid false positives
+        const nomorKeywords = ["nomor nd", "nota dinas", "no.", "nomor"]; // Added "nomor" back but will be careful with context
         for (const keyword of nomorKeywords) {
-            const regex = new RegExp(`${keyword}\\s*[:\\s]*([\\w\\/\\.\\-]+)`, "i");
-            const match = fullTextContent.substring(0, Math.min(fullTextContent.length, 500)).match(regex); // Search in header part
-            if (match && match[1]) {
-                data.nomorNdSvpIa = cleanText(match[1]);
+            // Regex refined to better match formats like C.Tel.XXX/UM 500/HCS-A1010000/2025
+            // Allows alphanumeric, '.', '/', '-', and spaces within the number string.
+            // Ensures it doesn't just capture a simple number if "nomor" is used more broadly.
+            const valuePattern = "([A-Z0-9\\/\\.\\-\\s]*[A-Z0-9\\/][A-Z0-9\\/\\.\\-\\s]*)"; // Must contain at least one letter or slash and not be purely numeric for generic "nomor"
+            let regex;
+            if (keyword === "nomor") { // More restrictive for generic "nomor" to avoid capturing any number
+                 regex = new RegExp(`${keyword}\\s*[:\\s]*${valuePattern}(?=\\s|\\n|$)`, "i");
+            } else {
+                 regex = new RegExp(`${keyword}\\s*[:\\s]*([A-Z0-9\\/\\.\\-\\s]+[A-Z0-9])`, "i");
+            }
+
+            const match = fullTextContent.substring(0, Math.min(fullTextContent.length, 600)).match(regex); // Search in header part (increased length slightly)
+            if (match && match[1] && match[1].length > 5) { // Basic sanity check for length
+                data.nomorNdSvpIa = cleanText(match[1].replace(/\s+/g, ' ').trim()); // Normalize spaces within the number
                 break;
             }
         }
@@ -247,17 +257,50 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       // No SPK (already good, uses spkRegex)
       // Masa Penyelesaian Pekerjaan (already good, uses masaRegex)
       // Temuan ND SVP IA (already good, uses ofiKeywords and ofiRegex)
-      // Rekomendasi ND SVP IA (Refined to include specific phrase)
+      // Temuan ND SVP IA (OFI) and linked Rekomendasi ND SVP IA
       try {
-        const rekomendasiSvpIaKeywords = ["rekomendasi", "kami menyampaikan rekomendasi"];
-        // Look for keyword then capture, or specific phrase then capture
-        const rekSvpIaRegex = new RegExp(`(?:${rekomendasiSvpIaKeywords.join('\\s*[:\\n\\s.-]*|')}\\s*)([\\s\\S]*?)(?=(?:tindak\\s+lanjut|penutup|hormat kami|demikian|\\n\\n[\\w\\s]{20,}|\\Z))`, "i");
-        const rekomendasiSvpIaMatch = fullTextContent.match(rekSvpIaRegex);
-        if (rekomendasiSvpIaMatch && rekomendasiSvpIaMatch[1] && rekomendasiSvpIaMatch[1].trim()) {
-          data.rekomendasiNdSvpIa = cleanText(rekomendasiSvpIaMatch[1].substring(0, 500));
-        }
-      } catch (e) { console.warn("Error ekstraksi Rekomendasi ND SVP IA (refined):", e); }
+        const ofiKeywords = ["opportunity for improvement", "ofi", "temuan"];
+        // Refined ofiRegex to also look for "kami menyampaikan rekomendasi" as a potential end delimiter for OFI.
+        const ofiRegex = new RegExp(`(?:${ofiKeywords.join('|')})\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:rekomendasi[:\\s\\n]|kami menyampaikan rekomendasi|\\n\\n[\\w\\s]{20,}|\Z))`, "i");
+        const ofiMatch = fullTextContent.match(ofiRegex);
 
+        if (ofiMatch && ofiMatch[1] && ofiMatch[1].trim().length > 5) { // Min length for OFI text
+            data.temuanNdSvpIa = cleanText(ofiMatch[1].substring(0, 500));
+
+            // Search for Rekomendasi *after* this OFI match
+            // Ensure ofiMatch.index and ofiMatch[0].length are valid before substring
+            const startIndexForRekomendasi = (ofiMatch.index !== undefined && ofiMatch[0] !== undefined) ? ofiMatch.index + ofiMatch[0].length : -1;
+
+            if (startIndexForRekomendasi !== -1 && startIndexForRekomendasi < fullTextContent.length) {
+                const textAfterOFI = fullTextContent.substring(startIndexForRekomendasi);
+                const rekomendasiKeywords = ["rekomendasi", "kami menyampaikan rekomendasi"];
+                // Regex for Rekomendasi: starts with keyword (possibly at beginning of line), then captures content
+                const rekRegex = new RegExp(`(?:^|\\n)\\s*(?:${rekomendasiKeywords.join('|')})\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:tindak\\s+lanjut|penutup|hormat kami|demikian|\\n\\n[\\w\\s]{20,}|\Z))`, "i");
+                const rekomendasiMatchInFollowingText = textAfterOFI.match(rekRegex);
+
+                if (rekomendasiMatchInFollowingText && rekomendasiMatchInFollowingText[1] && rekomendasiMatchInFollowingText[1].trim()) {
+                    data.rekomendasiNdSvpIa = cleanText(rekomendasiMatchInFollowingText[1].substring(0, 500));
+                } else {
+                    console.log("[content.js] Rekomendasi ND SVP IA not found immediately after OFI section using specific keywords.");
+                }
+            } else {
+                 console.log("[content.js] Invalid start index for Rekomendasi search after OFI.");
+            }
+        } else {
+            console.log("[content.js] OFI section not clearly identified, skipping linked Rekomendasi ND SVP IA search.");
+            // Fallback: If OFI wasn't found with the above, try a more general Rekomendasi search if temuan is still empty
+            // This retains some of the older broader search if the strict OFI->Rek linkage fails.
+            if (data.temuanNdSvpIa === "Data belum ditemukan" && data.rekomendasiNdSvpIa === "Data belum ditemukan") {
+                const standaloneRekSvpIaKeywords = ["rekomendasi", "kami menyampaikan rekomendasi"];
+                const standaloneRekSvpIaRegex = new RegExp(`(?:${standaloneRekSvpIaKeywords.join('\\s*[:\\n\\s.-]*|')}\\s*)([\\s\\S]*?)(?=(?:tindak\\s+lanjut|penutup|hormat kami|demikian|\\n\\n[\\w\\s]{20,}|\Z))`, "i");
+                const standaloneRekMatch = fullTextContent.match(standaloneRekSvpIaRegex);
+                if (standaloneRekMatch && standaloneRekMatch[1] && standaloneRekMatch[1].trim()) {
+                  data.rekomendasiNdSvpIa = cleanText(standaloneRekMatch[1].substring(0, 500));
+                  console.log("[content.js] Found Rekomendasi ND SVP IA using standalone search.");
+                }
+            }
+        }
+      } catch (e) { console.warn("Error ekstraksi Temuan ND SVP IA (OFI) or linked Rekomendasi:", e); }
 
       // CODE
       try {
@@ -474,13 +517,53 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                  break;
             }
         }
-      } catch (e) { console.warn("Error ekstraksi Status:", e); }
+      } catch (e) { console.warn("Error ekstraksi Status:", e); } // Old status text search can be removed or repurposed for flags
 
+      // --- Set flags based on textual cues ---
+      try {
+        const closedKeywords = ["closed", "selesai", "sudah ditindaklanjuti", "telah diselesaikan"];
+        // Search in the latter half of the document for closure status
+        const latterHalfText = fullTextContent.substring(Math.floor(fullTextContent.length / 2));
+        if (closedKeywords.some(kw => latterHalfText.includes(kw))) {
+            data.mtlClosed = 1;
+        }
+      } catch(e) { console.warn("Error checking for MTL Closed keywords:", e); }
 
-      if (data.mtlClosed === 1) data.status = "Closed"; // This logic might need review if status text is now extracted
-      else if (data.reschedule === 1) data.status = "Reschedule";
-      else if (data.overdue === 1) data.status = "Overdue";
-      else if (data.onSchedule === 1) data.status = "OnSchedule";
+      try {
+        const rescheduleKeywords = ["reschedule", "dijadwalkan ulang", "penyesuaian waktu"];
+        if (rescheduleKeywords.some(kw => fullTextContent.includes(kw))) {
+            data.reschedule = 1;
+        }
+      } catch(e) { console.warn("Error checking for Reschedule keywords:", e); }
+
+      try {
+        const overdueKeywords = ["overdue", "terlambat", "lewat deadline"];
+        if (overdueKeywords.some(kw => fullTextContent.includes(kw))) {
+            data.overdue = 1;
+        }
+      } catch(e) { console.warn("Error checking for Overdue keywords:", e); }
+
+      // --- Derive Status field ---
+      // Note: data.onSchedule is initialized to 0. It can be set to 1 by popup if no other status applies.
+      if (data.mtlClosed === 1) {
+        data.status = "Closed";
+      } else if (data.overdue === 1) {
+        data.status = "Overdue";
+      } else if (data.reschedule === 1) {
+        data.status = "Reschedule";
+      } else {
+        // If no specific textual cues for Closed, Overdue, Reschedule were found in NDE,
+        // default to "OnSchedule" from content.js perspective.
+        // The popup.js has its own default for OnSchedule if this remains "Data belum ditemukan".
+        // For clarity, if any significant data was extracted, we might assume "OnSchedule" here.
+        const hasAnyData = Object.values(data).some(val => val !== "Data belum ditemukan" && val !== "" && val !== 0);
+        if (hasAnyData && data.status === "Data belum ditemukan") { // Avoid overwriting if status was somehow already set by old logic
+             data.status = "OnSchedule"; // Default if other flags not set
+             data.onSchedule = 1; // Also set the flag for consistency
+        }
+      }
+      // The old opportunistic text search for data.status can be removed as per new logic.
+      // The above derivation is now the primary way data.status is set from content.js.
 
       console.log("Ekstraksi selesai dalam tryExtract.");
     };
@@ -693,7 +776,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
       // Nomor ND SVP IA (fallback)
       if (data.nomorNdSvpIa === "Data belum ditemukan") {
-        data.nomorNdSvpIa = extractValueAfterKeyword(allTextElements.slice(0, 30), ["nomor nd", "nota dinas", "no."], "\\s*[:\\s]*([\\w\\/\\.\\-]+)");
+        const nomorKeywords = ["nomor nd", "nota dinas", "no.", "nomor"];
+        const generalPattern = "\\s*[:\\s]*([A-Z0-9\\/\\.\\-\\s]+[A-Z0-9])";
+        const specificPatternForNomor = "\\s*[:\\s]*([A-Z0-9\\/\\.\\-\\s]*[A-Z0-9\\/][A-Z0-9\\/\\.\\-\\s]*)"; // Must contain letter or slash for generic "nomor"
+
+        let foundNomor = "Data belum ditemukan";
+        for(const keyword of nomorKeywords) {
+            let pattern = (keyword === "nomor") ? specificPatternForNomor : generalPattern;
+            foundNomor = extractValueAfterKeyword(allTextElements.slice(0, 30), [keyword], pattern);
+            if (foundNomor !== "Data belum ditemukan" && foundNomor.length > 5) {
+                 data.nomorNdSvpIa = cleanText(foundNomor.replace(/\s+/g, ' ').trim());
+                 break;
+            } else {
+                foundNomor = "Data belum ditemukan"; // Reset if too short or not found
+            }
+        }
+        if (foundNomor !== "Data belum ditemukan" && data.nomorNdSvpIa === "Data belum ditemukan") { // If loop finished with a short match not assigned
+            data.nomorNdSvpIa = cleanText(foundNomor.replace(/\s+/g, ' ').trim());
+        }
       }
       // Deskripsi ND SVP IA (fallback)
       if (data.deskripsiNdSvpIa === "Data belum ditemukan") {
@@ -774,6 +874,48 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
 
       // For fields not in this HTML, they will retain "Data belum ditemukan"
+
+      // --- Set flags based on textual cues in Standard HTML ---
+      try {
+        const closedKeywords = ["closed", "selesai", "sudah ditindaklanjuti", "telah diselesaikan"];
+        // Check last few elements for closure status
+        const footerElements = allTextElements.slice(Math.max(0, allTextElements.length - 20));
+        if (footerElements.some(el => closedKeywords.some(kw => (el.innerText || el.textContent || "").toLowerCase().includes(kw)))) {
+            data.mtlClosed = 1;
+        }
+      } catch(e) { console.warn("Error checking for MTL Closed keywords (standard HTML):", e); }
+
+      try {
+        const rescheduleKeywords = ["reschedule", "dijadwalkan ulang", "penyesuaian waktu"];
+        if (allTextElements.some(el => rescheduleKeywords.some(kw => (el.innerText || el.textContent || "").toLowerCase().includes(kw)))) {
+            data.reschedule = 1;
+        }
+      } catch(e) { console.warn("Error checking for Reschedule keywords (standard HTML):", e); }
+
+      try {
+        const overdueKeywords = ["overdue", "terlambat", "lewat deadline"];
+         if (allTextElements.some(el => overdueKeywords.some(kw => (el.innerText || el.textContent || "").toLowerCase().includes(kw)))) {
+            data.overdue = 1;
+        }
+      } catch(e) { console.warn("Error checking for Overdue keywords (standard HTML):", e); }
+
+      // --- Derive Status field for Standard HTML ---
+      if (data.mtlClosed === 1) {
+        data.status = "Closed";
+      } else if (data.overdue === 1) {
+        data.status = "Overdue";
+      } else if (data.reschedule === 1) {
+        data.status = "Reschedule";
+      } else {
+        const hasAnyData = Object.values(data).some(val => val !== "Data belum ditemukan" && val !== "" && val !== 0);
+        if (hasAnyData && data.status === "Data belum ditemukan") {
+             data.status = "OnSchedule";
+             data.onSchedule = 1;
+        }
+      }
+      // The old text search for status (using extractValueAfterKeyword for "status") is removed.
+      // data.status is now derived.
+
       console.log("Asisten NDE: Standard HTML extraction attempt complete.");
       return success; // For now, always return true if it runs, popup handles "Data belum ditemukan"
     };
