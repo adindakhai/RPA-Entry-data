@@ -96,29 +96,39 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     let extractedData = {
       noSPK: "Data belum ditemukan",
-      kelompok: "", // Akan diisi dari popup atau DB
-      code: "Data belum ditemukan",
-      masaPenyelesaianPekerjaan: "Data belum ditemukan",
-      matriksProgram: "Data belum ditemukan",
-      tanggalMatriks: "Data belum ditemukan",
-      nomorNdSvpIa: "Data belum ditemukan",
-      deskripsiNdSvpIa: "Data belum ditemukan",
-      tanggalNdSvpIa: "Data belum ditemukan",
-      temuanNdSvpIa: "Data belum ditemukan",
-      rekomendasiNdSvpIa: "Data belum ditemukan",
-      nomorNdDirut: "Data belum ditemukan",
-      deskripsiNdDirut: "Data belum ditemukan",
-      tanggalNdDirut: "Data belum ditemukan",
-      temuanNdDirut: "Data belum ditemukan",
-      rekomendasiNdDirut: "Data belum ditemukan",
-      duedateNdDirut: "", // Akan diisi dari popup
-      picNdDirut: "Data belum ditemukan",
-      uicNdDirut: "Data belum ditemukan",
-      mtlClosed: 0,
-      reschedule: 0,
-      overdue: 0,
-      onSchedule: 0,
-      status: "Data belum ditemukan"
+      noSPK: "Data belum ditemukan", // Existing
+      kelompok: "", // Existing - typically from popup/DB, but content.js could try
+      code: "Data belum ditemukan", // To be enhanced
+      masaPenyelesaianPekerjaan: "Data belum ditemukan", // Existing
+      matriksProgram: "Data belum ditemukan", // To be enhanced
+      tanggalMatriks: "Databelum ditemukan", // To be enhanced
+
+      nomorNdSvpIa: "Data belum ditemukan", // Existing
+      deskripsiNdSvpIa: "Data belum ditemukan", // Existing
+      tanggalNdSvpIa: "Data belum ditemukan", // Existing
+      temuanNdSvpIa: "Data belum ditemukan", // Existing
+      rekomendasiNdSvpIa: "Data belum ditemukan", // Existing
+
+      nomorNdDirut: "Data belum ditemukan", // To be enhanced
+      deskripsiNdDirut: "Data belum ditemukan", // To be enhanced
+      tanggalNdDirut: "Data belum ditemukan", // To be enhanced
+      temuanNdDirut: "Data belum ditemukan", // To be enhanced
+      rekomendasiNdDirut: "Data belum ditemukan", // To be enhanced
+      duedateNdDirut: "Data belum ditemukan", // To be enhanced (will likely be single string)
+
+      picNdDirut: "Data belum ditemukan", // To be enhanced
+      uicNdDirut: "Data belum ditemukan", // To be enhanced
+
+      // Status fields - typically not from NDE content, but defaults are set
+      mtlClosed: 0, // Existing
+      reschedule: 0, // Existing
+      overdue: 0, // Existing
+      onSchedule: 0, // Existing - popup.js defaults to 1 if undefined
+      status: "Data belum ditemukan", // Existing
+
+      // Supplemental, but good to have in init
+      pengirim: "Data belum ditemukan", // Added for consistency
+      idLampiran: "Data belum ditemukan" // Added for consistency
     };
 
     const cleanText = (text) => text ? text.replace(/\s+/g, ' ').trim() : "Data belum ditemukan";
@@ -206,7 +216,76 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           data.rekomendasiNdSvpIa = cleanText(rekomendasiMatch[1].substring(0, 500));
         }
       } catch (e) { console.warn("Error ekstraksi Rekomendasi ND SVP IA:", e); }
+
+      // Enhancement: Extract new fields
+      try {
+        const codeRegex = /(?:project\s+)?code\s*[:\-\s]*([\w\/\.\-]+)/i;
+        const codeMatch = fullTextContent.match(codeRegex);
+        if (codeMatch && codeMatch[1]) data.code = cleanText(codeMatch[1].toUpperCase());
+      } catch (e) { console.warn("Error ekstraksi CODE:", e); }
+
+      try {
+        const matriksProgramRegex = /matriks\s+program\s*[:\-\s]*([^\n]+)/i;
+        const matriksProgramMatch = fullTextContent.match(matriksProgramRegex);
+        if (matriksProgramMatch && matriksProgramMatch[1]) data.matriksProgram = cleanText(matriksProgramMatch[1]);
+      } catch (e) { console.warn("Error ekstraksi Matriks Program:", e); }
+
+      try {
+        const tanggalMatriksRegex = /tanggal\s+matriks\s*[:\-\s]*(\d{1,2}\s+\w+\s+\d{4})/i;
+        const tanggalMatriksMatch = fullTextContent.match(tanggalMatriksRegex);
+        if (tanggalMatriksMatch && tanggalMatriksMatch[1]) data.tanggalMatriks = cleanText(tanggalMatriksMatch[1]);
+      } catch (e) { console.warn("Error ekstraksi Tanggal Matriks:", e); }
+
+      // ND Dirut Fields (example regexes, may need refinement)
+      try {
+        const nomorNdDirutRegex = /nomor\s+nd\s+dirut\s*[:\-\s]*([\w\/\.\-]+)/i;
+        const nomorNdDirutMatch = fullTextContent.match(nomorNdDirutRegex);
+        if (nomorNdDirutMatch && nomorNdDirutMatch[1]) data.nomorNdDirut = cleanText(nomorNdDirutMatch[1]);
+      } catch (e) { console.warn("Error ekstraksi Nomor ND Dirut:", e); }
+
+      try {
+        const deskripsiNdDirutRegex = /perihal\s+nd\s+dirut\s*[:\-\s]*([^\n]+)/i;
+        const deskripsiNdDirutMatch = fullTextContent.match(deskripsiNdDirutRegex);
+        if (deskripsiNdDirutMatch && deskripsiNdDirutMatch[1]) data.deskripsiNdDirut = cleanText(deskripsiNdDirutMatch[1]);
+      } catch (e) { console.warn("Error ekstraksi Deskripsi ND Dirut:", e); }
+
+      try {
+        const tanggalNdDirutRegex = /tanggal\s+nd\s+dirut\s*[:\-\s]*(\d{1,2}\s+\w+\s+\d{4})/i;
+        const tanggalNdDirutMatch = fullTextContent.match(tanggalNdDirutRegex);
+        if (tanggalNdDirutMatch && tanggalNdDirutMatch[1]) data.tanggalNdDirut = cleanText(tanggalNdDirutMatch[1]);
+      } catch (e) { console.warn("Error ekstraksi Tanggal ND Dirut:", e); }
       
+      try {
+        const temuanNdDirutRegex = /(?:temuan|ofi)\s+nd\s+dirut\s*[:\n\s.-]*([\s\S]*?)(?=(?:rekomendasi\s+nd\s+dirut|\n\n[\w\s]{20,}|\Z))/i;
+        const temuanNdDirutMatch = fullTextContent.match(temuanNdDirutRegex);
+        if (temuanNdDirutMatch && temuanNdDirutMatch[1]) data.temuanNdDirut = cleanText(temuanNdDirutMatch[1].substring(0, 500));
+      } catch (e) { console.warn("Error ekstraksi Temuan ND Dirut:", e); }
+
+      try {
+        const rekomendasiNdDirutRegex = /rekomendasi\s+nd\s+dirut\s*[:\n\s.-]*([\s\S]*?)(?=(?:tindak\s+lanjut|penutup|hormat kami|demikian|\n\n[\w\s]{20,}|\Z))/i;
+        const rekomendasiNdDirutMatch = fullTextContent.match(rekomendasiNdDirutRegex);
+        if (rekomendasiNdDirutMatch && rekomendasiNdDirutMatch[1]) data.rekomendasiNdDirut = cleanText(rekomendasiNdDirutMatch[1].substring(0, 500));
+      } catch (e) { console.warn("Error ekstraksi Rekomendasi ND Dirut:", e); }
+
+      try {
+        const duedateNdDirutRegex = /(?:due\s*date|tanggal\s+jatuh\s+tempo)\s+nd\s+dirut\s*[:\-\s]*([^\n]+)/i;
+        const duedateNdDirutMatch = fullTextContent.match(duedateNdDirutRegex);
+        if (duedateNdDirutMatch && duedateNdDirutMatch[1]) data.duedateNdDirut = cleanText(duedateNdDirutMatch[1]);
+      } catch (e) { console.warn("Error ekstraksi Duedate ND Dirut:", e); }
+
+      try {
+        const picNdDirutRegex = /pic\s+nd\s+dirut\s*[:\-\s]*([^\n]+)/i;
+        const picNdDirutMatch = fullTextContent.match(picNdDirutRegex);
+        if (picNdDirutMatch && picNdDirutMatch[1]) data.picNdDirut = cleanText(picNdDirutMatch[1]);
+      } catch (e) { console.warn("Error ekstraksi PIC ND Dirut:", e); }
+
+      try {
+        const uicNdDirutRegex = /uic\s+nd\s+dirut\s*[:\-\s]*([^\n]+)/i;
+        const uicNdDirutMatch = fullTextContent.match(uicNdDirutRegex);
+        if (uicNdDirutMatch && uicNdDirutMatch[1]) data.uicNdDirut = cleanText(uicNdDirutMatch[1]);
+      } catch (e) { console.warn("Error ekstraksi UIC ND Dirut:", e); }
+
+
       if (data.mtlClosed === 1) data.status = "Closed";
       else if (data.reschedule === 1) data.status = "Reschedule";
       else if (data.overdue === 1) data.status = "Overdue";
@@ -215,7 +294,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       console.log("Ekstraksi selesai dalam tryExtract.");
     };
 
-    let observer = null; 
+    let observer = null;
 
     const performExtractionAndSendResponse = () => {
       const appVirtualDomElement = document.querySelector('app-virtualdom');
@@ -341,6 +420,47 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if(!rekomendasiText) console.warn("Rekomendasi not found in standard HTML.");
       } catch (e) { data.rekomendasiNdSvpIa = "Data belum ditemukan"; console.warn("Error extracting Rekomendasi (standard):", e); }
       
+      // Enhancement: Extract new fields from standard HTML
+      // These are examples; actual selectors/logic would depend on common NDE HTML structures not using Shadow DOM.
+
+      // Helper to find text by label in a definition list <dl><dt>Label</dt><dd>Value</dd></dl> or similar structure
+      const getTextAfterLabel = (labelKeyword) => {
+          try {
+              const allElements = document.querySelectorAll('p, span, div, td, dt, dd');
+              for (let el of allElements) {
+                  if (el.textContent.toLowerCase().includes(labelKeyword.toLowerCase())) {
+                      // Attempt to get next sibling, or parent's next sibling, or next dd if current is dt
+                      let valueElement = el.nextElementSibling;
+                      if (el.nodeName === 'DT' && el.nextElementSibling && el.nextElementSibling.nodeName === 'DD') {
+                          valueElement = el.nextElementSibling;
+                      } else if (!valueElement && el.parentElement.nextElementSibling) {
+                          valueElement = el.parentElement.nextElementSibling.querySelector('dd, td, :scope > span, :scope > div') || el.parentElement.nextElementSibling;
+                      }
+                      if (valueElement) return cleanText(valueElement.textContent.replace(/^[:\s-]+/, ''));
+                  }
+              }
+          } catch(e) { console.warn(`Error in getTextAfterLabel for ${labelKeyword}:`, e); }
+          return "Data belum ditemukan";
+      };
+
+      if (data.code === "Data belum ditemukan") data.code = getTextAfterLabel("code");
+      if (data.matriksProgram === "Data belum ditemukan") data.matriksProgram = getTextAfterLabel("matriks program");
+      if (data.tanggalMatriks === "Data belum ditemukan") data.tanggalMatriks = getTextAfterLabel("tanggal matriks");
+
+      if (data.nomorNdDirut === "Data belum ditemukan") data.nomorNdDirut = getTextAfterLabel("nomor nd dirut");
+      if (data.deskripsiNdDirut === "Data belum ditemukan") data.deskripsiNdDirut = getTextAfterLabel("perihal nd dirut");
+      if (data.tanggalNdDirut === "Data belum ditemukan") data.tanggalNdDirut = getTextAfterLabel("tanggal nd dirut");
+
+      // Temuan/Rekomendasi/Duedate/PIC/UIC for Dirut might be in more complex structures
+      // For now, these are less likely to be found with simple label searches in varied standard HTML
+      // Placeholder for more specific logic if patterns emerge:
+      // if (data.temuanNdDirut === "Data belum ditemukan") data.temuanNdDirut = getTextAfterLabel("temuan nd dirut");
+      // if (data.rekomendasiNdDirut === "Data belum ditemukan") data.rekomendasiNdDirut = getTextAfterLabel("rekomendasi nd dirut");
+      // if (data.duedateNdDirut === "Data belum ditemukan") data.duedateNdDirut = getTextAfterLabel("due date dirut");
+      // if (data.picNdDirut === "Data belum ditemukan") data.picNdDirut = getTextAfterLabel("pic nd dirut");
+      // if (data.uicNdDirut === "Data belum ditemukan") data.uicNdDirut = getTextAfterLabel("uic nd dirut");
+
+
       // For fields not in this HTML, they will retain "Data belum ditemukan"
       console.log("Asisten NDE: Standard HTML extraction attempt complete.");
       return success; // For now, always return true if it runs, popup handles "Data belum ditemukan"

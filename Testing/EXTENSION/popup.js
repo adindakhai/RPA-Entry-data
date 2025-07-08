@@ -15,6 +15,60 @@ document.addEventListener('DOMContentLoaded', () => {
     const temuanNdSvpIaInput = document.getElementById('popup-temuan-nd-svp-ia');
     const rekomendasiNdSvpIaInput = document.getElementById('popup-rekomendasi-nd-svp-ia');
 
+    // New MTL General Fields
+    const kelompokInput = document.getElementById('popup-kelompok');
+    const codeInput = document.getElementById('popup-code');
+    const masaPenyelesaianInput = document.getElementById('popup-masa-penyelesaian');
+    const matriksProgramInput = document.getElementById('popup-matriks-program');
+    const tanggalMatriksInput = document.getElementById('popup-tanggal-matriks');
+
+    // New ND Dirut Fields
+    const ndDirutNomorInput = document.getElementById('popup-nd-dirut-nomor');
+    const ndDirutTanggalInput = document.getElementById('popup-nd-dirut-tanggal');
+    const ndDirutDeskripsiInput = document.getElementById('popup-nd-dirut-deskripsi');
+    const ndDirutTemuanInput = document.getElementById('popup-nd-dirut-temuan');
+    const ndDirutRekomendasiInput = document.getElementById('popup-nd-dirut-rekomendasi');
+    const ndDirutDuedate1Input = document.getElementById('popup-nd-dirut-duedate1');
+    const ndDirutDuedate2Input = document.getElementById('popup-nd-dirut-duedate2');
+    const ndDirutPicInput = document.getElementById('popup-nd-dirut-pic');
+    const ndDirutUicInput = document.getElementById('popup-nd-dirut-uic');
+
+    // New MTL Status Fields
+    const mtlClosedInput = document.getElementById('popup-mtl-closed');
+    const rescheduleInput = document.getElementById('popup-reschedule');
+    const overdueInput = document.getElementById('popup-overdue');
+    const onscheduleInput = document.getElementById('popup-onschedule');
+    const statusInput = document.getElementById('popup-status');
+
+
+    // Date formatting helper for YYYY-MM-DD
+    function formatDateForInput(dateStr) {
+        if (!dateStr || dateStr === "Data belum ditemukan") return '';
+        // Try to parse common Indonesian format "DD MMMM YYYY"
+        const months = {
+            "januari": "01", "februari": "02", "maret": "03", "april": "04",
+            "mei": "05", "juni": "06", "juli": "07", "agustus": "08",
+            "september": "09", "oktober": "10", "november": "11", "desember": "12"
+        };
+        const parts = dateStr.toLowerCase().split(' ');
+        if (parts.length === 3) {
+            const day = parts[0].padStart(2, '0');
+            const month = months[parts[1]];
+            const year = parts[2];
+            if (day && month && year && year.length === 4) {
+                return `${year}-${month}-${day}`;
+            }
+        }
+        // If it's already YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            return dateStr;
+        }
+        // Add more parsing logic if other formats are expected from content.js
+        console.warn(`[popup.js] Could not parse date: ${dateStr} into YYYY-MM-DD. Returning empty.`);
+        return ''; // Return empty if format is not recognized or invalid
+    }
+
+
     // Show only error, hide form
     const showError = (message) => {
         if (!message || message.trim() === "") {
@@ -182,50 +236,57 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Prepare data for MTL, combining popup values (user edits) with content script extractions
+            // Prepare data for MTL, combining popup values (user edits) with content script extractions
+            // Prioritize popup input value, then fallback to extractedDataFromContent, then to empty/default.
             const dataForMTL = {
-                // Fields from the user's list for IA Telkom.mhtml
-                no_spk: noSpkInput.value || extractedDataFromContent.noSPK || '',
-                kelompok: extractedDataFromContent.kelompok || 'Information Technology Audit', // Default or from content
-                CODE: extractedDataFromContent.code || '', // From content if available
-                // Masa_Penyelesaian_Pekerjaan1_Entry_form is disabled, so we don't try to set it.
-                // It's in extractedDataFromContent.masaPenyelesaianPekerjaan if needed elsewhere.
-                Matriks_Program: extractedDataFromContent.matriksProgram || '', // From content if available
-                Matriks_Tgl: extractedDataFromContent.tanggalMatriks || '', // From content if available
+                // User Table Field | `dataForMTL` Key         | Source from Popup (Primary) or Extracted (Fallback)
+                //------------------|--------------------------|--------------------------------------------------------------
+                kelompok:           kelompokInput.value         || extractedDataFromContent.kelompok || 'Information Technology Audit',
+                no_spk:             noSpkInput.value            || extractedDataFromContent.noSPK || '',
+                CODE:               codeInput.value             || extractedDataFromContent.code || '',
+                // Masa Penyelesaian Pekerjaan - MTL field is disabled, but we send the data if available
+                masaPenyelesaianPekerjaan: masaPenyelesaianInput.value || extractedDataFromContent.masaPenyelesaianPekerjaan || '',
+                Matriks_Program:    matriksProgramInput.value   || extractedDataFromContent.matriksProgram || '',
+                Matriks_Tgl:        tanggalMatriksInput.value   || formatDateForInput(extractedDataFromContent.tanggalMatriks) || '', // Ensure YYYY-MM-DD
 
-                ND_SVP_IA_Nomor: nomorNotaInput.value || extractedDataFromContent.nomorNdSvpIa || '',
-                Desc_ND_SVP_IA: perihalInput.value || extractedDataFromContent.deskripsiNdSvpIa || '',
-                ND_SVP_IA_Tanggal: tanggalNdSvpIaInput.value || extractedDataFromContent.tanggalNdSvpIa || '',
-                ND_SVP_IA_Temuan: temuanNdSvpIaInput.value || extractedDataFromContent.temuanNdSvpIa || '',
+                ND_SVP_IA_Nomor:    nomorNotaInput.value        || extractedDataFromContent.nomorNdSvpIa || '',
+                Desc_ND_SVP_IA:     perihalInput.value          || extractedDataFromContent.deskripsiNdSvpIa || '',
+                ND_SVP_IA_Tanggal:  tanggalNdSvpIaInput.value   || formatDateForInput(extractedDataFromContent.tanggalNdSvpIa) || '', // Ensure YYYY-MM-DD
+                ND_SVP_IA_Temuan:   temuanNdSvpIaInput.value    || extractedDataFromContent.temuanNdSvpIa || '',
+                // Assuming 'rekomendasiNdSvpIaInput' is the correct popup field for "Rekomendasi ND SVP IA"
                 ND_SVP_IA_Rekomendasi: rekomendasiNdSvpIaInput.value || extractedDataFromContent.rekomendasiNdSvpIa || '',
 
-                ND_Dirut_Nomor: extractedDataFromContent.nomorNdDirut || '',
-                Desc_ND_Dirut: extractedDataFromContent.deskripsiNdDirut || '',
-                ND_Dirut_Tgl: extractedDataFromContent.tanggalNdDirut || '',
-                ND_Dirut_Temuan: extractedDataFromContent.temuanNdDirut || '',
-                ND_Dirut_Rekomendasi: extractedDataFromContent.rekomendasiNdDirut || '',
+                ND_Dirut_Nomor:     ndDirutNomorInput.value     || extractedDataFromContent.nomorNdDirut || '',
+                Desc_ND_Dirut:      ndDirutDeskripsiInput.value || extractedDataFromContent.deskripsiNdDirut || '',
+                ND_Dirut_Tgl:       ndDirutTanggalInput.value   || formatDateForInput(extractedDataFromContent.tanggalNdDirut) || '', // Ensure YYYY-MM-DD
+                ND_Dirut_Temuan:    ndDirutTemuanInput.value    || extractedDataFromContent.temuanNdDirut || '',
+                ND_Dirut_Rekomendasi: ndDirutRekomendasiInput.value || extractedDataFromContent.rekomendasiNdDirut || '',
 
-                // Assuming Duedate ND Dirut might be split into two fields as per user's doc
-                // For now, using a single field; filler script might need to adapt
-                ND_Dirut_Duedate1: extractedDataFromContent.duedateNdDirut || '',
-                ND_Dirut_Duedate2: '', // If there's a second part
+                ND_Dirut_Duedate1:  ndDirutDuedate1Input.value  || formatDateForInput(extractedDataFromContent.duedateNdDirut) || '', // content.js 'duedateNdDirut' goes to Duedate1
+                ND_Dirut_Duedate2:  ndDirutDuedate2Input.value  || '', // Duedate2 is likely manual or from a different source
 
-                ND_Dirut_PIC: extractedDataFromContent.picNdDirut || '',
-                ND_Dirut_UIC: extractedDataFromContent.uicNdDirut || '',
+                ND_Dirut_PIC:       ndDirutPicInput.value       || extractedDataFromContent.picNdDirut || '',
+                ND_Dirut_UIC:       ndDirutUicInput.value       || extractedDataFromContent.uicNdDirut || '',
 
-                // These seem to be status counters/values, default to 0 or empty if not in NDE
-                MTL_Closed: extractedDataFromContent.mtlClosed || 0,
-                Reschedule: extractedDataFromContent.reschedule || 0,
-                Overdue: extractedDataFromContent.overdue || 0,
-                OnSchedule: extractedDataFromContent.onSchedule === undefined ? 1 : extractedDataFromContent.onSchedule, // Default to 1 if not present
-                Status: extractedDataFromContent.status || 'OnSchedule', // Default
+                // Status fields: values from popup (which might have been pre-filled by content.js)
+                // Convert empty strings from number inputs to 0 or a suitable default if necessary,
+                // but filler script might handle empty strings appropriately for number fields.
+                // For now, send what's in the popup or extracted, then default to 0 if nothing.
+                MTL_Closed:         mtlClosedInput.value !== ""      ? Number(mtlClosedInput.value)   : (extractedDataFromContent.mtlClosed !== undefined ? Number(extractedDataFromContent.mtlClosed) : 0),
+                Reschedule:         rescheduleInput.value !== ""     ? Number(rescheduleInput.value)  : (extractedDataFromContent.reschedule !== undefined ? Number(extractedDataFromContent.reschedule) : 0),
+                Overdue:            overdueInput.value !== ""        ? Number(overdueInput.value)     : (extractedDataFromContent.overdue !== undefined ? Number(extractedDataFromContent.overdue) : 0),
+                // OnSchedule: default to 1 if nothing else, as per original logic
+                OnSchedule:         onscheduleInput.value !== ""     ? Number(onscheduleInput.value)  : (extractedDataFromContent.onSchedule !== undefined ? Number(extractedDataFromContent.onSchedule) : 1),
+                Status:             statusInput.value           || extractedDataFromContent.status || 'OnSchedule', // Default
 
-                // Fields from popup that might not directly map or are supplemental
+                // Supplemental fields (not directly in user's MTL table but were in original dataForMTL)
                 idLampiran: idLampiranInput.value || extractedDataFromContent.idLampiran || '',
                 pengirim: pengirimInput.value || extractedDataFromContent.pengirim || '',
-                // Add other fields from extractedDataFromContent if they have a target in IA Telkom.mhtml
-                masaPenyelesaianPekerjaan: extractedDataFromContent.masaPenyelesaianPekerjaan || '',
-
             };
+            // Remove masaPenyelesaianPekerjaan if it's empty and we don't want to send it
+            // However, the original code sent it, so keeping it for now.
+            // if (!dataForMTL.masaPenyelesaianPekerjaan) delete dataForMTL.masaPenyelesaianPekerjaan;
+
 
             console.log("[popup.js] Prepared dataForMTL:", dataForMTL);
 
@@ -302,34 +363,80 @@ document.addEventListener('DOMContentLoaded', () => {
             await chrome.storage.local.set({ ndeToMtlExtractedData: response.data });
 
             const {
+                // Existing fields from content.js
                 noSPK,
-                // masaPenyelesaianPekerjaan, // Not directly on popup
                 nomorNdSvpIa,
                 deskripsiNdSvpIa,
                 tanggalNdSvpIa,
                 temuanNdSvpIa,
-                rekomendasiNdSvpIa
+                rekomendasiNdSvpIa,
+                pengirim, // Assuming content.js might provide this
+                idLampiran, // Assuming content.js might provide this
+
+                // Potential new fields from content.js (even if not fully implemented there yet)
+                kelompok,
+                code,
+                masaPenyelesaianPekerjaan,
+                matriksProgram,
+                tanggalMatriks,
+                nomorNdDirut,
+                deskripsiNdDirut,
+                tanggalNdDirut,
+                temuanNdDirut,
+                rekomendasiNdDirut,
+                duedateNdDirut, // This might be a single string from content.js
+                picNdDirut,
+                uicNdDirut,
+                mtlClosed,
+                reschedule,
+                overdue,
+                onSchedule,
+                status
             } = response.data;
 
-            if (nomorNotaInput) nomorNotaInput.value = (nomorNdSvpIa && nomorNdSvpIa !== "Data belum ditemukan") ? nomorNdSvpIa : "";
-            if (perihalInput) perihalInput.value = (deskripsiNdSvpIa && deskripsiNdSvpIa !== "Data belum ditemukan") ? deskripsiNdSvpIa : "";
-            if (noSpkInput) noSpkInput.value = (noSPK && noSPK !== "Data belum ditemukan") ? noSPK : "";
-            if (tanggalNdSvpIaInput) tanggalNdSvpIaInput.value = (tanggalNdSvpIa && tanggalNdSvpIa !== "Data belum ditemukan") ? tanggalNdSvpIa : "";
-            if (temuanNdSvpIaInput) temuanNdSvpIaInput.value = (temuanNdSvpIa && temuanNdSvpIa !== "Data belum ditemukan") ? temuanNdSvpIa : "";
+            // Helper to safely set value or empty string if data is "Data belum ditemukan" or undefined
+            const safeSet = (value) => (value && value !== "Data belum ditemukan" ? value : "");
 
-            if (rekomendasiNdSvpIaInput) {
-                const recText = (rekomendasiNdSvpIa && rekomendasiNdSvpIa !== "Data belum ditemukan") ? rekomendasiNdSvpIa : "";
-                rekomendasiNdSvpIaInput.value = highlightRekomendasi(recText); // Keep existing highlighting
-            }
-
-            // Also populate other fields if they exist in the popup and are in response.data
-            // Example:
-            // if (pengirimInput && response.data.pengirim) pengirimInput.value = response.data.pengirim;
-            // if (idLampiranInput && response.data.idLampiran) idLampiranInput.value = response.data.idLampiran;
+            // Populate existing popup fields
+            if (nomorNotaInput) nomorNotaInput.value = safeSet(nomorNdSvpIa);
+            if (perihalInput) perihalInput.value = safeSet(deskripsiNdSvpIa);
+            if (pengirimInput) pengirimInput.value = safeSet(pengirim);
+            if (idLampiranInput) idLampiranInput.value = safeSet(idLampiran);
+            if (noSpkInput) noSpkInput.value = safeSet(noSPK);
+            if (tanggalNdSvpIaInput) tanggalNdSvpIaInput.value = formatDateForInput(safeSet(tanggalNdSvpIa));
+            if (temuanNdSvpIaInput) temuanNdSvpIaInput.value = safeSet(temuanNdSvpIa);
+            if (rekomendasiNdSvpIaInput) rekomendasiNdSvpIaInput.value = highlightRekomendasi(safeSet(rekomendasiNdSvpIa));
 
 
-            const hasSignificantData = (nomorNdSvpIa && nomorNdSvpIa !== "Data belum ditemukan") ||
-                                       (deskripsiNdSvpIa && deskripsiNdSvpIa !== "Data belum ditemukan");
+            // Populate new MTL General Fields
+            if (kelompokInput) kelompokInput.value = safeSet(kelompok);
+            if (codeInput) codeInput.value = safeSet(code);
+            if (masaPenyelesaianInput) masaPenyelesaianInput.value = safeSet(masaPenyelesaianPekerjaan);
+            if (matriksProgramInput) matriksProgramInput.value = safeSet(matriksProgram);
+            if (tanggalMatriksInput) tanggalMatriksInput.value = formatDateForInput(safeSet(tanggalMatriks));
+
+            // Populate new ND Dirut Fields
+            if (ndDirutNomorInput) ndDirutNomorInput.value = safeSet(nomorNdDirut);
+            if (ndDirutTanggalInput) ndDirutTanggalInput.value = formatDateForInput(safeSet(tanggalNdDirut));
+            if (ndDirutDeskripsiInput) ndDirutDeskripsiInput.value = safeSet(deskripsiNdDirut);
+            if (ndDirutTemuanInput) ndDirutTemuanInput.value = safeSet(temuanNdDirut);
+            if (ndDirutRekomendasiInput) ndDirutRekomendasiInput.value = safeSet(rekomendasiNdDirut);
+            // For duedateNdDirut, content.js might send a single string. We'll put it in the first field.
+            if (ndDirutDuedate1Input) ndDirutDuedate1Input.value = formatDateForInput(safeSet(duedateNdDirut));
+            if (ndDirutDuedate2Input) ndDirutDuedate2Input.value = ""; // Clear or handle separately if needed
+            if (ndDirutPicInput) ndDirutPicInput.value = safeSet(picNdDirut);
+            if (ndDirutUicInput) ndDirutUicInput.value = safeSet(uicNdDirut);
+
+            // Populate new MTL Status Fields
+            // For these numeric/boolean fields, ensure they are numbers or empty string for the input.
+            if (mtlClosedInput) mtlClosedInput.value = (mtlClosed !== undefined && mtlClosed !== "Data belum ditemukan") ? Number(mtlClosed) : "";
+            if (rescheduleInput) rescheduleInput.value = (reschedule !== undefined && reschedule !== "Data belum ditemukan") ? Number(reschedule) : "";
+            if (overdueInput) overdueInput.value = (overdue !== undefined && overdue !== "Data belum ditemukan") ? Number(overdue) : "";
+            if (onscheduleInput) onscheduleInput.value = (onSchedule !== undefined && onSchedule !== "Data belum ditemukan") ? Number(onSchedule) : "";
+            if (statusInput) statusInput.value = safeSet(status);
+
+
+            const hasSignificantData = safeSet(nomorNdSvpIa) || safeSet(deskripsiNdSvpIa);
 
             if (hasSignificantData) {
                 showForm();

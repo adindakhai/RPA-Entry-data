@@ -19,120 +19,127 @@ function isCorrectPage() {
 // Function to fill form fields
 function fillFormFields(data) {
     console.log("[ia_telkom_filler.js] Received data to fill:", data);
-    let allFieldsFound = true;
+    let allFieldsFound = true; // Keep track if all *expected* fields are found
     let errors = [];
 
-    // Helper to set value and log
-    function setFieldValue(id, value, type = 'input') {
-        const element = document.getElementById(id);
+    // Helper to set value using querySelector and log
+    // Type can be 'input', 'textarea', 'select', or 'date'
+    function setFieldValue(selector, value, fieldName, type = 'input') {
+        if (value === undefined || value === null || value === "Data belum ditemukan") {
+            // Don't try to fill if value is placeholder for "not found" or truly undefined/null
+            // unless it's an intentional empty string "" which means clear the field.
+            if (value !== "") {
+                console.log(`[ia_telkom_filler.js] No valid data for "${fieldName}" (selector: ${selector}). Skipping.`);
+                return;
+            }
+        }
+
+        const element = document.querySelector(selector);
         if (element) {
-            if (type === 'select') {
+            // For date inputs, ensure value is in YYYY-MM-DD or empty
+            if (element.type === 'date') {
+                if (value === '' || /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+                    element.value = value;
+                } else {
+                    console.warn(`[ia_telkom_filler.js] Invalid date format "${value}" for "${fieldName}" (selector: ${selector}). Expected YYYY-MM-DD. Skipping.`);
+                    errors.push(`Invalid date format for ${fieldName}: ${value}`);
+                    allFieldsFound = false; // Or a different error flag
+                    return;
+                }
+            } else if (type === 'select') {
                 let optionFound = false;
                 for (let i = 0; i < element.options.length; i++) {
-                    if (element.options[i].value === value || element.options[i].text === value) {
+                    if (element.options[i].value === String(value) || element.options[i].text === String(value)) {
                         element.selectedIndex = i;
                         optionFound = true;
                         break;
                     }
                 }
-                if (!optionFound && value) { // If a value was provided but not matched
-                     console.warn(`[ia_telkom_filler.js] Option "${value}" not found for select ID "${id}". Setting to first option or leaving as is.`);
-                     // element.selectedIndex = 0; // Optionally select the first one or leave as is
-                } else if (!optionFound && !value) {
-                    // If no value provided, do nothing or select default
+                if (!optionFound && value !== "") {
+                     console.warn(`[ia_telkom_filler.js] Option "${value}" not found for select "${fieldName}" (selector: ${selector}).`);
+                     // errors.push(`Option "${value}" not found for ${fieldName}`); // Decide if this is a critical error
                 }
-            } else if (type === 'textarea') {
-                element.value = value;
-            } else { // input
+            } else { // input, textarea
                 element.value = value;
             }
-            // Dispatch input and change events to ensure any JavaScript listening for changes is triggered
+            // Dispatch input and change events
             element.dispatchEvent(new Event('input', { bubbles: true }));
             element.dispatchEvent(new Event('change', { bubbles: true }));
-            console.log(`[ia_telkom_filler.js] Set ID "${id}" to "${value}"`);
+            console.log(`[ia_telkom_filler.js] Set "${fieldName}" (selector: ${selector}) to "${value}"`);
         } else {
-            console.warn(`[ia_telkom_filler.js] Element with ID "${id}" not found.`);
-            // Only consider it a critical error if data was provided for this field
-            if (value && value !== "" && value !== 0) {
-                errors.push(`Field with ID "${id}" not found.`);
+            console.warn(`[ia_telkom_filler.js] Element with selector "${selector}" for field "${fieldName}" not found.`);
+            // Only consider it a critical error if data was actually provided for this field
+            if (value !== "" && value !== undefined && value !== null && value !== "Data belum ditemukan") {
+                errors.push(`Field "${fieldName}" (selector: ${selector}) not found on page.`);
                 allFieldsFound = false;
             }
         }
     }
 
     // --- Fill fields based on user's provided list and data object ---
-    // Ensure field names in `data` object match what's sent from popup.js
+    // Selectors are taken from the user's table.
+    // data keys match those in dataForMTL from popup.js
 
-    setFieldValue('inputno_spk', data.no_spk); // User-provided ID
-    setFieldValue('kelompok', data.kelompok, 'select'); // User-provided ID, type select
-    setFieldValue('inputCODE', data.CODE); // User-provided ID
+    // Label Dokumen                   | Selector HTML                                                    | data key from popup.js
+    // ------------------------------- | ---------------------------------------------------------------- | --------------------------
+    setFieldValue('#kelompok', data.kelompok, 'Kelompok', 'select');
+    setFieldValue('input[name="no_spk"]', data.no_spk, 'No SPK'); // Also .inputno_spk - prefer name attribute selector
+    setFieldValue('input[name="CODE"]', data.CODE, 'CODE'); // Also .inputCODE
 
-    // Masa_Penyelesaian_Pekerjaan1_Entry_form is disabled, skip as per plan.
-    // ID: Masa_Penyelesaian_Pekerjaan1_Entry_form (User-provided)
-    // const masaPekerjaanField = document.getElementById('Masa_Penyelesaian_Pekerjaan1_Entry_form');
-    // if (masaPekerjaanField) {
-    //     masaPekerjaanField.value = data.masaPenyelesaianPekerjaan || '';
-    //     console.log("[ia_telkom_filler.js] Set disabled field Masa_Penyelesaian_Pekerjaan1_Entry_form");
-    // }
+    // Masa Penyelesaian Pekerjaan - User said #Masa_Penyelesaian_Pekerjaan1_Entry_form is disabled.
+    // We'll still try to set it if the element exists and is not strictly read-only by HTML attribute.
+    // JavaScript might enable it or read its value.
+    const masaPekerjaanField = document.querySelector('#Masa_Penyelesaian_Pekerjaan1_Entry_form');
+    if (masaPekerjaanField && data.masaPenyelesaianPekerjaan) {
+        masaPekerjaanField.value = data.masaPenyelesaianPekerjaan;
+        masaPekerjaanField.dispatchEvent(new Event('input', { bubbles: true }));
+        masaPekerjaanField.dispatchEvent(new Event('change', { bubbles: true }));
+        console.log(`[ia_telkom_filler.js] Set "Masa Penyelesaian Pekerjaan" to "${data.masaPenyelesaianPekerjaan}" (field might be disabled)`);
+    } else if (data.masaPenyelesaianPekerjaan) {
+        console.warn(`[ia_telkom_filler.js] Field #Masa_Penyelesaian_Pekerjaan1_Entry_form for "Masa Penyelesaian" not found, or no data.`);
+    }
 
-    setFieldValue('inputMatriks_Program', data.Matriks_Program); // User-provided ID
-    setFieldValue('Matriks_Tgl_Entry', data.Matriks_Tgl); // User-provided ID, type date
+    setFieldValue('input[name="Matriks_Program"]', data.Matriks_Program, 'Matriks Program'); // Also .inputMatriks_Program
+    setFieldValue('#Matriks_Tgl_Entry', data.Matriks_Tgl, 'Tanggal Matriks', 'date');
 
-    setFieldValue('inputND_SVP_IA_Nomor', data.ND_SVP_IA_Nomor); // User-provided ID
-    setFieldValue('inputDesc_ND_SVP_IA', data.Desc_ND_SVP_IA); // User-provided ID
-    setFieldValue('ND_SVP_IA_Tanggal_Entry', data.ND_SVP_IA_Tanggal); // User-provided ID, type date
+    setFieldValue('input[name="ND_SVP_IA_Nomor"]', data.ND_SVP_IA_Nomor, 'Nomor ND SVP IA'); // Also .inputND_SVP_IA_Nomor
+    setFieldValue('input[name="Desc_ND_SVP_IA"]', data.Desc_ND_SVP_IA, 'Deskripsi ND SVP IA'); // Also .inputDesc_ND_SVP_IA
+    setFieldValue('#ND_SVP_IA_Tanggal_Entry', data.ND_SVP_IA_Tanggal, 'Tanggal ND SVP IA', 'date');
+    setFieldValue('#inputND_SVP_IA_Temuan', data.ND_SVP_IA_Temuan, 'Temuan ND SVP IA', 'textarea');
 
-    setFieldValue('inputND_SVP_IA_Temuan', data.ND_SVP_IA_Temuan, 'textarea'); // User-provided ID
-
-    // Rekomendasi ND SVP IA - User reports ID is 'inputND_SVP_IA_Temuan' (same as Temuan ND SVP IA)
-    // This is problematic if they are two distinct fields.
-    // For now, we will only attempt to fill the 'Temuan' field with this ID.
-    // If 'Rekomendasi ND SVP IA' is a separate field, it needs a unique ID in the HTML.
+    // Rekomendasi ND SVP IA - User reports ID is '#inputND_SVP_IA_Temuan' (same as Temuan ND SVP IA)
+    // This is problematic. DO NOT FILL unless a unique selector is provided and confirmed.
+    // For now, we log if data for it exists, and await user feedback for the correct selector.
+    // UPDATE: User has provided the selector: #inputND_SVP_IA_Rekomendasi
     if (data.ND_SVP_IA_Rekomendasi && data.ND_SVP_IA_Rekomendasi !== "Data belum ditemukan") {
-        const temuanField = document.getElementById('inputND_SVP_IA_Temuan');
-        if (temuanField && temuanField.value === data.ND_SVP_IA_Temuan) { // Check if Temuan was already filled
-             console.warn(`[ia_telkom_filler.js] 'Rekomendasi ND SVP IA' has data ("${data.ND_SVP_IA_Rekomendasi}") but its specified ID 'inputND_SVP_IA_Temuan' is the same as 'Temuan ND SVP IA'. Cannot reliably fill 'Rekomendasi ND SVP IA' if it's a separate field. Please ensure it has a unique ID in the HTML. Data for Rekomendasi ND SVP IA was not filled to avoid overwriting Temuan.`);
-             errors.push("'Rekomendasi ND SVP IA' field ID conflicts with 'Temuan ND SVP IA'. Rekomendasi data not filled.");
-        } else if (temuanField) {
-            // If temuan field is empty or different, and we are meant to fill Rekomendasi here.
-            // This assumes 'inputND_SVP_IA_Temuan' is indeed for Rekomendasi if Temuan data was absent or different.
-            // This is still risky.
-            // setFieldValue('inputND_SVP_IA_Temuan', data.ND_SVP_IA_Rekomendasi, 'textarea');
-            // console.log(`[ia_telkom_filler.js] Filled 'inputND_SVP_IA_Temuan' with Rekomendasi data as Temuan data was different or absent.`);
-            console.warn(`[ia_telkom_filler.js] 'Rekomendasi ND SVP IA' has data but its ID 'inputND_SVP_IA_Temuan' is problematic. Rekomendasi data not filled.`);
-            errors.push("'Rekomendasi ND SVP IA' field ID is problematic. Rekomendasi data not filled.");
-        } else {
-            // If even the 'inputND_SVP_IA_Temuan' field itself isn't found.
-            console.warn("[ia_telkom_filler.js] Field for 'Temuan/Rekomendasi ND SVP IA' with ID 'inputND_SVP_IA_Temuan' not found.");
-            if (data.ND_SVP_IA_Rekomendasi && data.ND_SVP_IA_Rekomendasi !== "Data belum ditemukan") {
-                 errors.push("Field for 'Rekomendasi ND SVP IA' (ID 'inputND_SVP_IA_Temuan') not found.");
-            }
-        }
+        setFieldValue('#inputND_SVP_IA_Rekomendasi', data.ND_SVP_IA_Rekomendasi, 'Rekomendasi ND SVP IA', 'textarea');
+    } else if (data.ND_SVP_IA_Rekomendasi === "") { // Handle intentional clearing
+        setFieldValue('#inputND_SVP_IA_Rekomendasi', "", 'Rekomendasi ND SVP IA', 'textarea');
     }
 
 
-    setFieldValue('inputND_Dirut_Nomor', data.ND_Dirut_Nomor); // User-provided ID
-    setFieldValue('inputDesc_ND_Dirut', data.Desc_ND_Dirut); // User-provided ID
-    setFieldValue('inputND_Dirut_Tgl', data.ND_Dirut_Tgl); // User-provided ID, type date
-    setFieldValue('inputND_Dirut_Temuan', data.ND_Dirut_Temuan, 'textarea'); // User-provided ID
-    setFieldValue('inputND_Dirut_Rekomendasi', data.ND_Dirut_Rekomendasi, 'textarea'); // User-provided ID
+    setFieldValue('input[name="ND_Dirut_Nomor"]', data.ND_Dirut_Nomor, 'Nomor ND Dirut'); // Also .inputND_Dirut_Nomor
+    // User table: input[name="Desc_ND_Dirut"] atau .inputDesc_ND_Dirut_Nomor (assuming typo, should be Desc_ND_Dirut)
+    setFieldValue('input[name="Desc_ND_Dirut"]', data.Desc_ND_Dirut, 'Deskripsi ND Dirut');
+    setFieldValue('input[name="ND_Dirut_Tgl"]', data.ND_Dirut_Tgl, 'Tanggal ND Dirut', 'date'); // Assumed ID inputND_Dirut_Tgl, using name attr
+    setFieldValue('#inputND_Dirut_Temuan', data.ND_Dirut_Temuan, 'Temuan ND Dirut', 'textarea');
+    setFieldValue('#inputND_Dirut_Rekomendasi', data.ND_Dirut_Rekomendasi, 'Rekomendasi ND Dirut', 'textarea');
 
-    // Duedate ND Dirut - consists of two dropdowns
-    setFieldValue('ND_Dirut_Duedate1', data.ND_Dirut_Duedate1, 'select'); // User-provided ID
-    setFieldValue('ND_Dirut_Duedate2', data.ND_Dirut_Duedate2, 'select'); // User-provided ID
+    setFieldValue('#ND_Dirut_Duedate1', data.ND_Dirut_Duedate1, 'Duedate ND Dirut 1', 'select'); // User table says two selects
+    setFieldValue('#ND_Dirut_Duedate2', data.ND_Dirut_Duedate2, 'Duedate ND Dirut 2', 'select');
 
-    setFieldValue('inputND_Dirut_PIC', data.ND_Dirut_PIC); // User-provided ID
-    setFieldValue('inputND_Dirut_UIC', data.ND_Dirut_UIC); // User-provided ID
+    setFieldValue('input[name="ND_Dirut_PIC"]', data.ND_Dirut_PIC, 'PIC ND Dirut');
+    setFieldValue('input[name="ND_Dirut_UIC"]', data.ND_Dirut_UIC, 'UIC ND Dirut');
 
-    // IDs for status fields seem to be direct from user's list
-    setFieldValue('closeinput', data.MTL_Closed);
-    setFieldValue('rescheduleinput', data.Reschedule);
-    setFieldValue('overdueinput', data.Overdue);
-    setFieldValue('onscheduleinput', data.OnSchedule);
-    setFieldValue('statusinput', data.Status);
+    setFieldValue('#closeinput', data.MTL_Closed, 'MTL Closed'); // Also input[name="MTL_Closed"]
+    setFieldValue('#rescheduleinput', data.Reschedule, 'Reschedule'); // Also input[name="Reschedule"]
+    setFieldValue('#overdueinput', data.Overdue, 'Overdue');   // Also input[name="Overdue"]
+    setFieldValue('#onscheduleinput', data.OnSchedule, 'OnSchedule'); // Also input[name="On Schedule"]
+    setFieldValue('#statusinput', data.Status, 'Status');       // Also input[name="Status"]
+
 
     if (errors.length > 0) {
-        return { success: false, message: `Some fields could not be filled or had issues: ${errors.join(', ')}` };
+        return { success: false, message: `Some fields could not be filled or had issues: ${errors.join('; ')}` };
     }
     return { success: true, message: "Form fields populated." };
 }
