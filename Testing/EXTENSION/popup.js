@@ -1,11 +1,39 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Get references to DOM elements in the popup
+    // --- Tab Switching Logic ---
+    const tabTriggers = document.querySelectorAll('.tabs-trigger');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    // Function to switch tabs
+    function switchTab(targetTabId) {
+        tabTriggers.forEach(trigger => {
+            trigger.classList.toggle('active', trigger.dataset.tab === targetTabId);
+        });
+        tabContents.forEach(content => {
+            content.classList.toggle('active', content.id === `${targetTabId}-tab`);
+        });
+    }
+
+    // Add click listeners to tab triggers
+    tabTriggers.forEach(trigger => {
+        trigger.addEventListener('click', () => {
+            switchTab(trigger.dataset.tab);
+        });
+    });
+
+    // Set initial active tab (e.g., 'basic')
+    // The 'active' class should already be on the 'basic' tab trigger and content in HTML.
+    // If not, uncomment and set here:
+    // switchTab('basic');
+
+
+    // --- Existing Logic (Adapted) ---
     const getDataBtn = document.getElementById('get-data-btn');
     const sendDataBtn = document.getElementById('send-data-btn');
-    const dataDisplayDiv = document.getElementById('data-display');
+    // const dataDisplayDiv = document.getElementById('data-display'); // This ID is no longer used for main form
     const statusError = document.getElementById('status-error');
+    const mainContentArea = document.querySelector('.flex-1.p-4'); // The main area holding tabs
 
-    // Input fields in the popup
+    // Input fields (ensure these IDs match your new HTML structure if they changed)
     const nomorNotaInput = document.getElementById('popup-nomor-nota');
     const perihalInput = document.getElementById('popup-perihal');
     const pengirimInput = document.getElementById('popup-pengirim');
@@ -15,14 +43,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const temuanNdSvpIaInput = document.getElementById('popup-temuan-nd-svp-ia');
     const rekomendasiNdSvpIaInput = document.getElementById('popup-rekomendasi-nd-svp-ia');
 
-    // New MTL General Fields
     const kelompokInput = document.getElementById('popup-kelompok');
     const codeInput = document.getElementById('popup-code');
     const masaPenyelesaianInput = document.getElementById('popup-masa-penyelesaian');
     const matriksProgramInput = document.getElementById('popup-matriks-program');
     const tanggalMatriksInput = document.getElementById('popup-tanggal-matriks');
 
-    // New ND Dirut Fields
     const ndDirutNomorInput = document.getElementById('popup-nd-dirut-nomor');
     const ndDirutTanggalInput = document.getElementById('popup-nd-dirut-tanggal');
     const ndDirutDeskripsiInput = document.getElementById('popup-nd-dirut-deskripsi');
@@ -33,7 +59,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const ndDirutPicInput = document.getElementById('popup-nd-dirut-pic');
     const ndDirutUicInput = document.getElementById('popup-nd-dirut-uic');
 
-    // New MTL Status Fields
     const mtlClosedInput = document.getElementById('popup-mtl-closed');
     const rescheduleInput = document.getElementById('popup-reschedule');
     const overdueInput = document.getElementById('popup-overdue');
@@ -41,10 +66,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusInput = document.getElementById('popup-status');
 
 
-    // Date formatting helper for YYYY-MM-DD
     function formatDateForInput(dateStr) {
         if (!dateStr || dateStr === "Data belum ditemukan") return '';
-        // Try to parse common Indonesian format "DD MMMM YYYY"
         const months = {
             "januari": "01", "februari": "02", "maret": "03", "april": "04",
             "mei": "05", "juni": "06", "juli": "07", "agustus": "08",
@@ -59,47 +82,65 @@ document.addEventListener('DOMContentLoaded', () => {
                 return `${year}-${month}-${day}`;
             }
         }
-        // If it's already YYYY-MM-DD
         if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
             return dateStr;
         }
-        // Add more parsing logic if other formats are expected from content.js
         console.warn(`[popup.js] Could not parse date: ${dateStr} into YYYY-MM-DD. Returning empty.`);
-        return ''; // Return empty if format is not recognized or invalid
+        return '';
     }
 
-
-    // Show only error, hide form
     const showError = (message) => {
+        const errorTextEl = statusError.querySelector('p'); // Assuming the <p> is the direct child for text
         if (!message || message.trim() === "") {
             statusError.style.display = 'none';
-            dataDisplayDiv.style.display = 'none';
+            if (errorTextEl) errorTextEl.textContent = '';
             return;
         }
-        dataDisplayDiv.style.display = 'none';
-        statusError.style.display = '';
-        const errorText = statusError.querySelector('p:last-child');
-        errorText.textContent = message;
+        // mainContentArea.style.display = 'none'; // Don't hide the whole form area
+        statusError.style.display = ''; // This should be a block or flex depending on CSS
+        if (errorTextEl) errorTextEl.textContent = message;
+        sendDataBtn.disabled = true; // Disable send if there's an error
     };
 
-    // Show only form, hide error
-    const showForm = () => {
-        statusError.style.display = 'none';
-        dataDisplayDiv.style.display = '';
-        sendDataBtn.disabled = false;
-    };
+    // This function is effectively replaced by directly enabling the button after data load.
+    // const showForm = () => {
+    //     statusError.style.display = 'none';
+    //     // mainContentArea.style.display = ''; // Form is always visible
+    //     sendDataBtn.disabled = false;
+    // };
 
-    const showLoading = (isLoading) => {
-        const icon = getDataBtn.querySelector('i');
-        const text = getDataBtn.querySelector('span');
-        if (isLoading) {
-            icon.className = 'fas fa-spinner animate-spin text-sm';
-            text.textContent = 'Extracting...';
-            getDataBtn.disabled = true;
-        } else {
-            icon.className = 'fas fa-download text-sm';
-            text.textContent = 'Extract Data';
-            getDataBtn.disabled = false;
+    const showLoading = (isLoading, buttonType = 'extract') => {
+        let btn, icon, textSpan;
+
+        if (buttonType === 'extract') {
+            btn = getDataBtn;
+            icon = btn.querySelector('i');
+            textSpan = btn.querySelector('span');
+            if (isLoading) {
+                icon.className = 'fas fa-spinner animate-spin text-xs mr-1';
+                textSpan.textContent = 'Extracting...';
+                btn.disabled = true;
+            } else {
+                icon.className = 'fas fa-download text-xs mr-1';
+                textSpan.textContent = 'Extract Data';
+                btn.disabled = false;
+            }
+        } else if (buttonType === 'send') {
+            btn = sendDataBtn;
+            icon = btn.querySelector('i');
+            textSpan = btn.querySelector('span');
+            const originalIconClass = 'fas fa-paper-plane text-xs mr-1'; // Store original
+            if (isLoading) {
+                icon.className = 'fas fa-spinner animate-spin text-xs mr-1';
+                textSpan.textContent = 'Sending...';
+                btn.disabled = true;
+            } else {
+                // This state (isLoading=false for send) will be set by the sendData logic itself
+                // For now, just ensure it can be reset if needed.
+                // icon.className = originalIconClass;
+                // textSpan.textContent = 'Send to MTL';
+                // btn.disabled = false; // Or based on isDataExtracted
+            }
         }
     };
 
@@ -113,380 +154,205 @@ document.addEventListener('DOMContentLoaded', () => {
         return highlights.join('\n');
     }
 
-    getDataBtn.addEventListener('click', async () => {
-        showLoading(true);
-        try {
-            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            const allowed = (
-                tab.url.includes('nde_mockup.html') ||
-                tab.url.toLowerCase().endsWith('.mhtml') ||
-                tab.url.toLowerCase().includes('notadinas')
-            );
-            if (!allowed) {
-                showLoading(false);
-                showError('Please open a supported NDE or Notadinas file!');
-                return;
-            }
-            chrome.tabs.sendMessage(tab.id, { action: "getDataFromNDE" }, (response) => {
-    showLoading(false);
-    if (chrome.runtime.lastError) {
-        showError('Failed to connect to page. Please ensure "Allow access to file URLs" is enabled for this extension and refresh the NDE page.');
-        console.error("[popup.js] sendMessage lastError:", chrome.runtime.lastError.message);
-        return;
-    }
-
-    // Periksa apakah respons ada dan sukses
-    if (response && response.success && response.data) {
-        console.log("[popup.js] Data diterima dari content.js:", response.data);
-
-        // Destrukturisasi dengan nama field yang benar dari content.js
-        const {
-            noSPK,
-            masaPenyelesaianPekerjaan,
-            nomorNdSvpIa,
-            deskripsiNdSvpIa,
-            tanggalNdSvpIa,
-            temuanNdSvpIa,
-            rekomendasiNdSvpIa
-            // pengirim, // Uncomment jika 'pengirim' sudah diekstrak di content.js
-            // Anda bisa tambahkan field lain di sini jika sudah ada di response.data
-        } = response.data;
-
-        // Mengisi input fields di popup
-        // Pastikan variabel input (nomorNotaInput, dll.) sudah dideklarasikan di scope atas
-        // dan ID elemennya cocok dengan yang ada di popup.html
-
-        if (nomorNotaInput) nomorNotaInput.value = (nomorNdSvpIa && nomorNdSvpIa !== "Data belum ditemukan") ? nomorNdSvpIa : "";
-        if (perihalInput) perihalInput.value = (deskripsiNdSvpIa && deskripsiNdSvpIa !== "Data belum ditemukan") ? deskripsiNdSvpIa : "";
-        
-        // Contoh untuk pengirim (jika sudah ada variabel pengirimInput dan field pengirim di response.data)
-        // if (pengirimInput && pengirim && pengirim !== "Data belum ditemukan") pengirimInput.value = pengirim;
-        // else if (pengirimInput) pengirimInput.value = "";
-
-        // Untuk idLampiran, kita belum mengekstraknya secara spesifik di content.js
-        // if (idLampiranInput) idLampiranInput.value = ""; // Kosongkan dulu atau isi default
-
-        if (noSpkInput) noSpkInput.value = (noSPK && noSPK !== "Data belum ditemukan") ? noSPK : "";
-        if (tanggalNdSvpIaInput) tanggalNdSvpIaInput.value = (tanggalNdSvpIa && tanggalNdSvpIa !== "Data belum ditemukan") ? tanggalNdSvpIa : "";
-        if (temuanNdSvpIaInput) temuanNdSvpIaInput.value = (temuanNdSvpIa && temuanNdSvpIa !== "Data belum ditemukan") ? temuanNdSvpIa : "";
-        
-        if (rekomendasiNdSvpIaInput) {
-            const recText = (rekomendasiNdSvpIa && rekomendasiNdSvpIa !== "Data belum ditemukan") ? rekomendasiNdSvpIa : "";
-            rekomendasiNdSvpIaInput.value = highlightRekomendasi(recText);
-        }
-
-        // Jika Anda punya input untuk masaPenyelesaianPekerjaan:
-        // const elMasaPenyelesaian = document.getElementById('popup-masa-penyelesaian'); // Ganti ID jika perlu
-        // if (elMasaPenyelesaian) elMasaPenyelesaian.value = (masaPenyelesaianPekerjaan && masaPenyelesaianPekerjaan !== "Data belum ditemukan") ? masaPenyelesaianPekerjaan : "";
-
-        // Cek apakah ada data signifikan yang terisi untuk menampilkan form
-        const hasSignificantData = (nomorNdSvpIa && nomorNdSvpIa !== "Data belum ditemukan") || 
-                                   (deskripsiNdSvpIa && deskripsiNdSvpIa !== "Data belum ditemukan");
-
-        if (hasSignificantData) {
-            showForm();
-        } else {
-            // Jika tidak ada data signifikan, tetap tampilkan form agar bisa diisi manual
-            // Semua field akan berisi string kosong jika nilainya "Data belum ditemukan"
-            showForm(); 
-            // Pertimbangkan untuk memberi notifikasi jika semua field kosong:
-            // console.log("[popup.js] Tidak ada data signifikan yang diekstrak, form ditampilkan kosong.");
-        }
-
-    } else if (response && !response.success) {
-        // Jika content.js mengirim success: false beserta pesan error
-        showError(response.message || 'Failed to extract data from page. Content script reported an issue.');
-        console.warn('[popup.js] Pesan error dari content.js:', response.message);
-    } else {
-        // Jika tidak ada respons sama sekali atau formatnya salah
-        showError('No response or invalid data from page. Please try refreshing the NDE page and the extension.');
-        console.warn('[popup.js] Respons tidak valid atau tidak ada:', response);
-    }
-});
-        } catch (error) {
-            showLoading(false);
-            showError('An unexpected error occurred. Please try again.');
-            console.error('Error:', error);
-        }
-    });
-
-    sendDataBtn.addEventListener('click', async () => {
-        const sendIcon = sendDataBtn.querySelector('i');
-        const sendText = sendDataBtn.querySelector('span');
-        const originalIcon = sendIcon.className;
-        const originalText = sendText.textContent;
-
-        sendIcon.className = 'fas fa-spinner animate-spin text-sm';
-        sendText.textContent = 'Sending...';
-        sendDataBtn.disabled = true;
-        showError(''); // Clear previous errors
-
-        try {
-            // Retrieve fully extracted data from content script, stored temporarily in local storage
-            // This ensures we use the most complete data set from content.js
-            const result = await chrome.storage.local.get('ndeToMtlExtractedData');
-            const extractedDataFromContent = result.ndeToMtlExtractedData;
-
-            if (!extractedDataFromContent) {
-                showError('No extracted NDE data found. Please extract data first.');
-                sendIcon.className = originalIcon;
-                sendText.textContent = originalText;
-                sendDataBtn.disabled = false;
-                return;
-            }
-
-            // Prepare data for MTL, combining popup values (user edits) with content script extractions
-            // Prepare data for MTL, combining popup values (user edits) with content script extractions
-            // Prioritize popup input value, then fallback to extractedDataFromContent, then to empty/default.
-            const dataForMTL = {
-                // User Table Field | `dataForMTL` Key         | Source from Popup (Primary) or Extracted (Fallback)
-                //------------------|--------------------------|--------------------------------------------------------------
-                kelompok:           kelompokInput.value         || extractedDataFromContent.kelompok || 'Information Technology Audit',
-                no_spk:             noSpkInput.value            || extractedDataFromContent.noSPK || '',
-                CODE:               codeInput.value             || extractedDataFromContent.code || '',
-                // Masa Penyelesaian Pekerjaan - MTL field is disabled, but we send the data if available
-                masaPenyelesaianPekerjaan: masaPenyelesaianInput.value || extractedDataFromContent.masaPenyelesaianPekerjaan || '',
-                Matriks_Program:    matriksProgramInput.value   || extractedDataFromContent.matriksProgram || '',
-                Matriks_Tgl:        tanggalMatriksInput.value   || formatDateForInput(extractedDataFromContent.tanggalMatriks) || '', // Ensure YYYY-MM-DD
-
-                ND_SVP_IA_Nomor:    nomorNotaInput.value        || extractedDataFromContent.nomorNdSvpIa || '',
-                Desc_ND_SVP_IA:     perihalInput.value          || extractedDataFromContent.deskripsiNdSvpIa || '',
-                ND_SVP_IA_Tanggal:  tanggalNdSvpIaInput.value   || formatDateForInput(extractedDataFromContent.tanggalNdSvpIa) || '', // Ensure YYYY-MM-DD
-                ND_SVP_IA_Temuan:   temuanNdSvpIaInput.value    || extractedDataFromContent.temuanNdSvpIa || '',
-                // Assuming 'rekomendasiNdSvpIaInput' is the correct popup field for "Rekomendasi ND SVP IA"
-                ND_SVP_IA_Rekomendasi: rekomendasiNdSvpIaInput.value || extractedDataFromContent.rekomendasiNdSvpIa || '',
-
-                ND_Dirut_Nomor:     ndDirutNomorInput.value     || extractedDataFromContent.nomorNdDirut || '',
-                Desc_ND_Dirut:      ndDirutDeskripsiInput.value || extractedDataFromContent.deskripsiNdDirut || '',
-                ND_Dirut_Tgl:       ndDirutTanggalInput.value   || formatDateForInput(extractedDataFromContent.tanggalNdDirut) || '', // Ensure YYYY-MM-DD
-                ND_Dirut_Temuan:    ndDirutTemuanInput.value    || extractedDataFromContent.temuanNdDirut || '',
-                ND_Dirut_Rekomendasi: ndDirutRekomendasiInput.value || extractedDataFromContent.rekomendasiNdDirut || '',
-
-                ND_Dirut_Duedate1:  ndDirutDuedate1Input.value  || formatDateForInput(extractedDataFromContent.duedateNdDirut) || '', // content.js 'duedateNdDirut' goes to Duedate1
-                ND_Dirut_Duedate2:  ndDirutDuedate2Input.value  || '', // Duedate2 is likely manual or from a different source
-
-                ND_Dirut_PIC:       ndDirutPicInput.value       || extractedDataFromContent.picNdDirut || '',
-                ND_Dirut_UIC:       ndDirutUicInput.value       || extractedDataFromContent.uicNdDirut || '',
-
-                // Status fields: values from popup (which might have been pre-filled by content.js)
-                // Convert empty strings from number inputs to 0 or a suitable default if necessary,
-                // but filler script might handle empty strings appropriately for number fields.
-                // For now, send what's in the popup or extracted, then default to 0 if nothing.
-                MTL_Closed:         mtlClosedInput.value !== ""      ? Number(mtlClosedInput.value)   : (extractedDataFromContent.mtlClosed !== undefined ? Number(extractedDataFromContent.mtlClosed) : 0),
-                Reschedule:         rescheduleInput.value !== ""     ? Number(rescheduleInput.value)  : (extractedDataFromContent.reschedule !== undefined ? Number(extractedDataFromContent.reschedule) : 0),
-                Overdue:            overdueInput.value !== ""        ? Number(overdueInput.value)     : (extractedDataFromContent.overdue !== undefined ? Number(extractedDataFromContent.overdue) : 0),
-                // OnSchedule: default to 1 if nothing else, as per original logic
-                OnSchedule:         onscheduleInput.value !== ""     ? Number(onscheduleInput.value)  : (extractedDataFromContent.onSchedule !== undefined ? Number(extractedDataFromContent.onSchedule) : 1),
-                Status:             statusInput.value           || extractedDataFromContent.status || 'OnSchedule', // Default
-
-                // Supplemental fields (not directly in user's MTL table but were in original dataForMTL)
-                idLampiran: idLampiranInput.value || extractedDataFromContent.idLampiran || '',
-                pengirim: pengirimInput.value || extractedDataFromContent.pengirim || '',
-            };
-            // Remove masaPenyelesaianPekerjaan if it's empty and we don't want to send it
-            // However, the original code sent it, so keeping it for now.
-            // if (!dataForMTL.masaPenyelesaianPekerjaan) delete dataForMTL.masaPenyelesaianPekerjaan;
-
-            // ############# JULES: ADDED DETAILED LOG #############
-            console.log("[popup.js] --- BEGINNING OF DATA FOR MTL ---");
-            console.log("[popup.js] Data being sent to ia_telkom_filler.js:", JSON.stringify(dataForMTL, null, 2));
-            console.log("[popup.js] --- END OF DATA FOR MTL ---");
-            // ############# JULES: END OF ADDED LOG #############
-
-            console.log("[popup.js] Prepared dataForMTL:", dataForMTL);
-
-            // Query for IA Telkom.mhtml tab
-            chrome.tabs.query({ url: "file:///*" }, (tabs) => {
-                const mtlTabs = tabs.filter(tab => {
-                    if (tab.url) {
-                        const lowerUrl = tab.url.toLowerCase();
-                        // Check for "ia telkom.mhtml" or "ia%20telkom.mhtml" case-insensitively
-                        return lowerUrl.includes("ia telkom.mhtml") || lowerUrl.includes("ia%20telkom.mhtml");
-                    }
-                    return false;
-                });
-
-                if (mtlTabs.length > 0) {
-                    const targetTab = mtlTabs[0]; // Use the first match
-                    chrome.tabs.update(targetTab.id, { active: true });
-                    // Send a message to the content script in that tab
-                    chrome.tabs.sendMessage(targetTab.id, {
-                        action: "fillMTLForm",
-                        data: dataForMTL
-                    }, (response) => {
-                        if (chrome.runtime.lastError) {
-                            showError(`Could not connect to IA Telkom.mhtml. Ensure it's open and the extension has file access. Error: ${chrome.runtime.lastError.message}`);
-                            console.error("Error sending message to ia_telkom_filler.js:", chrome.runtime.lastError.message);
-                        } else if (response && response.success) {
-                            showError(''); // Clear error
-                            sendText.textContent = 'Data Sent!';
-                            // Optionally close popup after a delay or keep it open
-                            // setTimeout(() => window.close(), 2000);
-                        } else {
-                            showError(response ? response.message : 'Failed to get confirmation from IA Telkom.mhtml.');
-                        }
-                        sendIcon.className = originalIcon; // Reset icon
-                        // sendDataBtn.disabled = false; // Re-enable button only if we don't close
-                    });
-                } else {
-                    showError('File \'C:\\\\Users\\\\khair\\\\Downloads\\\\IA Telkom.mhtml\' is not open. Please open this file in a Chrome tab and try again.');
-                    sendIcon.className = originalIcon;
-                    sendText.textContent = originalText;
-                    sendDataBtn.disabled = false;
-                }
-            });
-
-        } catch (error) {
-            sendIcon.className = originalIcon;
-            sendText.textContent = originalText;
-            sendDataBtn.disabled = false;
-            showError('Failed to send data. Please try again. Error: ' + error.message);
-            console.error('Send error:', error);
-        }
-        // Not closing window.close(); immediately to allow user to see status/error.
-    });
-
-    // Store data from content.js into chrome.storage.local when received
-    // This is a new listener to capture the full data set from content.js
-    // Assumes content.js will send a message like { action: "storeExtractedData", data: extractedData }
-    // However, current content.js sends data back to popup directly.
-    // Modifying getDataBtn listener to store this data.
-
-    // Modify existing getDataBtn's response handler
     const originalGetDataResponseHandler = async (response) => {
-        showLoading(false);
+        showLoading(false, 'extract');
         if (chrome.runtime.lastError) {
-            showError('Failed to connect to page. Please ensure "Allow access to file URLs" is enabled for this extension and refresh the NDE page.');
+            showError('Failed to connect to page. Ensure "Allow access to file URLs" is enabled and refresh NDE page.');
             console.error("[popup.js] sendMessage lastError:", chrome.runtime.lastError.message);
             return;
         }
 
         if (response && response.success && response.data) {
-            console.log("[popup.js] Data diterima dari content.js:", response.data);
-
-            // Store the complete extracted data for sendDataBtn to use
+            console.log("[popup.js] Data received from content.js:", response.data);
             await chrome.storage.local.set({ ndeToMtlExtractedData: response.data });
 
-            const {
-                // Existing fields from content.js
-                noSPK,
-                nomorNdSvpIa,
-                deskripsiNdSvpIa,
-                tanggalNdSvpIa,
-                temuanNdSvpIa,
-                rekomendasiNdSvpIa,
-                pengirim, // Assuming content.js might provide this
-                idLampiran, // Assuming content.js might provide this
-
-                // Potential new fields from content.js (even if not fully implemented there yet)
-                kelompok,
-                code,
-                masaPenyelesaianPekerjaan,
-                matriksProgram,
-                tanggalMatriks,
-                nomorNdDirut,
-                deskripsiNdDirut,
-                tanggalNdDirut,
-                temuanNdDirut,
-                rekomendasiNdDirut,
-                duedateNdDirut, // This might be a single string from content.js
-                picNdDirut,
-                uicNdDirut,
-                mtlClosed,
-                reschedule,
-                overdue,
-                onSchedule,
-                status
-            } = response.data;
-
-            // Helper to safely set value or empty string if data is "Data belum ditemukan" or undefined
+            const d = response.data;
             const safeSet = (value) => (value && value !== "Data belum ditemukan" ? value : "");
 
-            // Populate existing popup fields
-            if (nomorNotaInput) nomorNotaInput.value = safeSet(nomorNdSvpIa);
-            if (perihalInput) perihalInput.value = safeSet(deskripsiNdSvpIa);
-            if (pengirimInput) pengirimInput.value = safeSet(pengirim);
-            if (idLampiranInput) idLampiranInput.value = safeSet(idLampiran);
-            if (noSpkInput) noSpkInput.value = safeSet(noSPK);
-            if (tanggalNdSvpIaInput) tanggalNdSvpIaInput.value = formatDateForInput(safeSet(tanggalNdSvpIa));
-            if (temuanNdSvpIaInput) temuanNdSvpIaInput.value = safeSet(temuanNdSvpIa);
-            if (rekomendasiNdSvpIaInput) rekomendasiNdSvpIaInput.value = highlightRekomendasi(safeSet(rekomendasiNdSvpIa));
+            if (nomorNotaInput) nomorNotaInput.value = safeSet(d.nomorNdSvpIa);
+            if (perihalInput) perihalInput.value = safeSet(d.deskripsiNdSvpIa);
+            if (pengirimInput) pengirimInput.value = safeSet(d.pengirim);
+            if (idLampiranInput) idLampiranInput.value = safeSet(d.idLampiran);
 
+            if (noSpkInput) noSpkInput.value = safeSet(d.noSPK);
+            if (tanggalNdSvpIaInput) tanggalNdSvpIaInput.value = formatDateForInput(safeSet(d.tanggalNdSvpIa));
+            if (temuanNdSvpIaInput) temuanNdSvpIaInput.value = safeSet(d.temuanNdSvpIa);
+            if (rekomendasiNdSvpIaInput) rekomendasiNdSvpIaInput.value = highlightRekomendasi(safeSet(d.rekomendasiNdSvpIa));
 
-            // Populate new MTL General Fields
-            if (kelompokInput) kelompokInput.value = safeSet(kelompok);
-            if (codeInput) codeInput.value = safeSet(code);
-            if (masaPenyelesaianInput) masaPenyelesaianInput.value = safeSet(masaPenyelesaianPekerjaan);
-            if (matriksProgramInput) matriksProgramInput.value = safeSet(matriksProgram);
-            if (tanggalMatriksInput) tanggalMatriksInput.value = formatDateForInput(safeSet(tanggalMatriks));
+            if (kelompokInput) kelompokInput.value = safeSet(d.kelompok);
+            if (codeInput) codeInput.value = safeSet(d.code);
+            if (masaPenyelesaianInput) masaPenyelesaianInput.value = safeSet(d.masaPenyelesaianPekerjaan);
+            if (matriksProgramInput) matriksProgramInput.value = safeSet(d.matriksProgram);
+            if (tanggalMatriksInput) tanggalMatriksInput.value = formatDateForInput(safeSet(d.tanggalMatriks));
 
-            // Populate new ND Dirut Fields
-            if (ndDirutNomorInput) ndDirutNomorInput.value = safeSet(nomorNdDirut);
-            if (ndDirutTanggalInput) ndDirutTanggalInput.value = formatDateForInput(safeSet(tanggalNdDirut));
-            if (ndDirutDeskripsiInput) ndDirutDeskripsiInput.value = safeSet(deskripsiNdDirut);
-            if (ndDirutTemuanInput) ndDirutTemuanInput.value = safeSet(temuanNdDirut);
-            if (ndDirutRekomendasiInput) ndDirutRekomendasiInput.value = safeSet(rekomendasiNdDirut);
-            // For duedateNdDirut, content.js might send a single string. We'll put it in the first field.
-            if (ndDirutDuedate1Input) ndDirutDuedate1Input.value = formatDateForInput(safeSet(duedateNdDirut));
-            if (ndDirutDuedate2Input) ndDirutDuedate2Input.value = ""; // Clear or handle separately if needed
-            if (ndDirutPicInput) ndDirutPicInput.value = safeSet(picNdDirut);
-            if (ndDirutUicInput) ndDirutUicInput.value = safeSet(uicNdDirut);
+            if (ndDirutNomorInput) ndDirutNomorInput.value = safeSet(d.nomorNdDirut);
+            if (ndDirutTanggalInput) ndDirutTanggalInput.value = formatDateForInput(safeSet(d.tanggalNdDirut));
+            if (ndDirutDeskripsiInput) ndDirutDeskripsiInput.value = safeSet(d.deskripsiNdDirut);
+            if (ndDirutTemuanInput) ndDirutTemuanInput.value = safeSet(d.temuanNdDirut);
+            if (ndDirutRekomendasiInput) ndDirutRekomendasiInput.value = safeSet(d.rekomendasiNdDirut);
+            if (ndDirutDuedate1Input) ndDirutDuedate1Input.value = formatDateForInput(safeSet(d.duedateNdDirut));
+            if (ndDirutDuedate2Input) ndDirutDuedate2Input.value = "";
+            if (ndDirutPicInput) ndDirutPicInput.value = safeSet(d.picNdDirut);
+            if (ndDirutUicInput) ndDirutUicInput.value = safeSet(d.uicNdDirut);
 
-            // Populate new MTL Status Fields
-            // For these numeric/boolean fields, ensure they are numbers or empty string for the input.
-            if (mtlClosedInput) mtlClosedInput.value = (mtlClosed !== undefined && mtlClosed !== "Data belum ditemukan") ? Number(mtlClosed) : "";
-            if (rescheduleInput) rescheduleInput.value = (reschedule !== undefined && reschedule !== "Data belum ditemukan") ? Number(reschedule) : "";
-            if (overdueInput) overdueInput.value = (overdue !== undefined && overdue !== "Data belum ditemukan") ? Number(overdue) : "";
-            if (onscheduleInput) onscheduleInput.value = (onSchedule !== undefined && onSchedule !== "Data belum ditemukan") ? Number(onSchedule) : "";
-            if (statusInput) statusInput.value = safeSet(status);
+            if (mtlClosedInput) mtlClosedInput.value = (d.mtlClosed !== undefined && d.mtlClosed !== "Data belum ditemukan") ? Number(d.mtlClosed) : "";
+            if (rescheduleInput) rescheduleInput.value = (d.reschedule !== undefined && d.reschedule !== "Data belum ditemukan") ? Number(d.reschedule) : "";
+            if (overdueInput) overdueInput.value = (d.overdue !== undefined && d.overdue !== "Data belum ditemukan") ? Number(d.overdue) : "";
+            if (onscheduleInput) onscheduleInput.value = (d.onSchedule !== undefined && d.onSchedule !== "Data belum ditemukan") ? Number(d.onSchedule) : "";
+            if (statusInput) statusInput.value = safeSet(d.status);
 
-
-            const hasSignificantData = safeSet(nomorNdSvpIa) || safeSet(deskripsiNdSvpIa);
-
-            if (hasSignificantData) {
-                showForm();
-            } else {
-                showForm();
-            }
+            showError(''); // Clear any previous errors
+            sendDataBtn.disabled = false; // Enable send button
+            // Switch to basic tab or the most relevant tab after data load might be good UX
+            // For now, it stays on the current tab.
+            // Example: switchTab('basic');
 
         } else if (response && !response.success) {
-            showError(response.message || 'Failed to extract data from page. Content script reported an issue.');
-            console.warn('[popup.js] Pesan error dari content.js:', response.message);
+            showError(response.message || 'Content script reported an issue.');
         } else {
-            showError('No response or invalid data from page. Please try refreshing the NDE page and the extension.');
-            console.warn('[popup.js] Respons tidak valid atau tidak ada:', response);
+            showError('No response or invalid data from page. Refresh NDE page and extension.');
         }
     };
 
-    // Detach original listener and attach new one if necessary, or modify it
-    // For simplicity, I'm assuming this is the only place `getDataFromNDE` response is handled.
-    // The original `getDataBtn` listener now calls `originalGetDataResponseHandler`
-    getDataBtn.removeEventListener('click', getDataBtn.fn); // Need to store original fn if this approach is taken elsewhere
-    getDataBtn.addEventListener('click', async () => {
-        showLoading(true);
-        try {
-            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-            const allowed = (
-                tab.url.includes('nde_mockup.html') ||
-                tab.url.toLowerCase().endsWith('.mhtml') ||
-                tab.url.toLowerCase().includes('notadinas')
-            );
-            if (!allowed) {
-                showLoading(false);
-                showError('Please open a supported NDE or Notadinas file!');
-                return;
+    if (getDataBtn) {
+        getDataBtn.addEventListener('click', async () => {
+            showLoading(true, 'extract');
+            try {
+                const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+                if (!tab) {
+                    showLoading(false, 'extract');
+                    showError("Cannot access current tab. Try again.");
+                    return;
+                }
+                const allowed = (
+                    tab.url &&
+                    (tab.url.includes('nde_mockup.html') ||
+                    tab.url.toLowerCase().endsWith('.mhtml') ||
+                    tab.url.toLowerCase().includes('notadinas'))
+                );
+                if (!allowed) {
+                    showLoading(false, 'extract');
+                    showError('Please open a supported NDE or Notadinas file!');
+                    return;
+                }
+                chrome.tabs.sendMessage(tab.id, { action: "getDataFromNDE" }, originalGetDataResponseHandler);
+            } catch (error) {
+                showLoading(false, 'extract');
+                showError('An unexpected error occurred: ' + error.message);
+                console.error('Error in getDataBtn:', error);
             }
-            // The response from sendMessage will be handled by originalGetDataResponseHandler
-            chrome.tabs.sendMessage(tab.id, { action: "getDataFromNDE" }, originalGetDataResponseHandler);
-        } catch (error) {
-            showLoading(false);
-            showError('An unexpected error occurred. Please try again.');
-            console.error('Error:', error);
-        }
-    });
+        });
+    }
 
 
-    // On load, show only the Extract Data button (form and error hidden)
-    dataDisplayDiv.style.display = 'none';
-    statusError.style.display = 'none';
+    if (sendDataBtn) {
+        sendDataBtn.addEventListener('click', async () => {
+            const sendIcon = sendDataBtn.querySelector('i');
+            const sendText = sendDataBtn.querySelector('span');
+            const originalIconClass = sendIcon.className; // Store to reset
+            const originalTextContent = sendText.textContent; // Store to reset
+
+            showLoading(true, 'send'); // Handles icon, text, disabled state
+            showError('');
+
+            try {
+                const result = await chrome.storage.local.get('ndeToMtlExtractedData');
+                const extractedDataFromContent = result.ndeToMtlExtractedData;
+
+                // Note: Even if extractedDataFromContent is null, we might still want to send manually entered data.
+                // The original code had a check, but let's assume the filler script can handle partial data.
+                // if (!extractedDataFromContent) {
+                //     showError('No base extracted NDE data found. Please extract data first if you need it.');
+                //     // Or, allow sending purely manual data. For now, let's proceed.
+                // }
+
+                const fallback = (value, fallbackValue = '') => (value !== undefined && value !== null ? value : fallbackValue);
+                const content = extractedDataFromContent || {}; // Use empty object if no stored data
+
+                const dataForMTL = {
+                    kelompok:           kelompokInput.value         || fallback(content.kelompok, 'Information Technology Audit'),
+                    no_spk:             noSpkInput.value            || fallback(content.noSPK),
+                    CODE:               codeInput.value             || fallback(content.code),
+                    masaPenyelesaianPekerjaan: masaPenyelesaianInput.value || fallback(content.masaPenyelesaianPekerjaan),
+                    Matriks_Program:    matriksProgramInput.value   || fallback(content.matriksProgram),
+                    Matriks_Tgl:        tanggalMatriksInput.value   || formatDateForInput(fallback(content.tanggalMatriks)),
+
+                    ND_SVP_IA_Nomor:    nomorNotaInput.value        || fallback(content.nomorNdSvpIa),
+                    Desc_ND_SVP_IA:     perihalInput.value          || fallback(content.deskripsiNdSvpIa),
+                    ND_SVP_IA_Tanggal:  tanggalNdSvpIaInput.value   || formatDateForInput(fallback(content.tanggalNdSvpIa)),
+                    ND_SVP_IA_Temuan:   temuanNdSvpIaInput.value    || fallback(content.temuanNdSvpIa),
+                    ND_SVP_IA_Rekomendasi: rekomendasiNdSvpIaInput.value || fallback(content.rekomendasiNdSvpIa),
+
+                    ND_Dirut_Nomor:     ndDirutNomorInput.value     || fallback(content.nomorNdDirut),
+                    Desc_ND_Dirut:      ndDirutDeskripsiInput.value || fallback(content.deskripsiNdDirut),
+                    ND_Dirut_Tgl:       ndDirutTanggalInput.value   || formatDateForInput(fallback(content.tanggalNdDirut)),
+                    ND_Dirut_Temuan:    ndDirutTemuanInput.value    || fallback(content.temuanNdDirut),
+                    ND_Dirut_Rekomendasi: ndDirutRekomendasiInput.value || fallback(content.rekomendasiNdDirut),
+                    ND_Dirut_Duedate1:  ndDirutDuedate1Input.value  || formatDateForInput(fallback(content.duedateNdDirut)),
+                    ND_Dirut_Duedate2:  ndDirutDuedate2Input.value  || '',
+                    ND_Dirut_PIC:       ndDirutPicInput.value       || fallback(content.picNdDirut),
+                    ND_Dirut_UIC:       ndDirutUicInput.value       || fallback(content.uicNdDirut),
+
+                    MTL_Closed:         mtlClosedInput.value !== ""      ? Number(mtlClosedInput.value)   : (fallback(content.mtlClosed) !== '' ? Number(fallback(content.mtlClosed)) : 0),
+                    Reschedule:         rescheduleInput.value !== ""     ? Number(rescheduleInput.value)  : (fallback(content.reschedule) !== '' ? Number(fallback(content.reschedule)) : 0),
+                    Overdue:            overdueInput.value !== ""        ? Number(overdueInput.value)     : (fallback(content.overdue) !== '' ? Number(fallback(content.overdue)) : 0),
+                    OnSchedule:         onscheduleInput.value !== ""     ? Number(onscheduleInput.value)  : (fallback(content.onSchedule, 1) !== '' ? Number(fallback(content.onSchedule, 1)) : 1), // Default 1
+                    Status:             statusInput.value           || fallback(content.status, 'OnSchedule'), // Default
+
+                    idLampiran: idLampiranInput.value || fallback(content.idLampiran),
+                    pengirim: pengirimInput.value || fallback(content.pengirim),
+                };
+
+                console.log("[popup.js] Data being sent to ia_telkom_filler.js:", JSON.stringify(dataForMTL, null, 2));
+
+                chrome.tabs.query({ url: "file:///*" }, (tabs) => {
+                    const mtlTabs = tabs.filter(tab =>
+                        tab.url && (tab.url.toLowerCase().includes("ia telkom.mhtml") || tab.url.toLowerCase().includes("ia%20telkom.mhtml"))
+                    );
+
+                    if (mtlTabs.length > 0) {
+                        const targetTab = mtlTabs[0];
+                        chrome.tabs.update(targetTab.id, { active: true });
+                        chrome.tabs.sendMessage(targetTab.id, {
+                            action: "fillMTLForm",
+                            data: dataForMTL
+                        }, (response) => {
+                            if (chrome.runtime.lastError) {
+                                showError(`Could not connect to IA Telkom.mhtml. Error: ${chrome.runtime.lastError.message}`);
+                                console.error("Error sending to ia_telkom_filler.js:", chrome.runtime.lastError.message);
+                                sendText.textContent = 'Send Failed'; // Update text
+                            } else if (response && response.success) {
+                                showError('');
+                                sendText.textContent = 'Data Sent!';
+                                // setTimeout(() => window.close(), 2000); // Optional: close popup
+                            } else {
+                                showError(response ? response.message : 'Failed: IA Telkom.mhtml confirmation error.');
+                                sendText.textContent = 'Send Failed';
+                            }
+                            // Reset button visuals but not necessarily re-enable if it's a final state like "Data Sent!"
+                            sendIcon.className = originalIconClass;
+                            // sendDataBtn.disabled = false; // Only re-enable if it's not a final success/close
+                        });
+                    } else {
+                        showError('File \'C:\\\\Users\\\\khair\\\\Downloads\\\\IA Telkom.mhtml\' is not open. Please open it.');
+                        sendIcon.className = originalIconClass;
+                        sendText.textContent = originalTextContent;
+                        sendDataBtn.disabled = false; // Re-enable since action couldn't be performed
+                    }
+                });
+
+            } catch (error) {
+                sendIcon.className = originalIconClass;
+                sendText.textContent = originalTextContent;
+                sendDataBtn.disabled = false;
+                showError('Failed to send data: ' + error.message);
+                console.error('Send error:', error);
+            }
+        });
+    }
+
+    // Initial state for UI elements that are not tabs
+    statusError.style.display = 'none'; // Error message hidden by default
+    if (sendDataBtn) sendDataBtn.disabled = true; // Send button disabled until data is extracted
+
 });
