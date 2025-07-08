@@ -1,103 +1,156 @@
+/* Additional styles for better cross-browser compatibility and responsive design */
+
 /* Ensure consistent font rendering */
 * {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom focus styles for inputs, mimicking shadcn/ui */
+/* Custom focus styles for better accessibility */
 .input-focus:focus {
     outline: none;
-    border-color: #3b82f6; /* blue-500 */
-    box-shadow: 0 0 0 1px #3b82f6; /* blue-500 */
-    /* transition: all 0.2s ease; */ /* Tailwind handles transitions if specified */
+    border-color: #2563eb; /* Slightly darker blue */
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); /* Softer and smaller shadow */
+    transition: all 0.2s ease;
+}
+
+/* Button states */
+.btn-hover:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Softer shadow */
+}
+
+.btn-hover:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05); /* Even softer shadow for active state */
+}
+
+/* Disabled button styles */
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
 }
 
 /* Custom scrollbar for webkit browsers */
 .custom-scrollbar::-webkit-scrollbar {
-    width: 5px; /* Slimmer scrollbar */
+    width: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent; /* Or use slate-100 if body bg is slate-50 */
+    background: #f1f5f9;
     border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #94a3b8; /* slate-400 */
+    background: #cbd5e1;
     border-radius: 3px;
     transition: background 0.2s ease;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #64748b; /* slate-500 */
+    background: #94a3b8;
 }
 
 /* Firefox scrollbar */
 .custom-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: #94a3b8 transparent; /* thumb color, track color */
+    scrollbar-color: #cbd5e1 #f1f5f9;
 }
 
-/* Loading animation (already in tailwind.css if using default config, or defined here) */
+/* Loading animation */
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }
+
 .animate-spin {
     animation: spin 1s linear infinite;
 }
 
-/* Tab specific styles */
-.tabs-trigger {
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px; /* Overlap with parent border-b if tabs-list has one */
-    transition: color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+/* Smooth transitions */
+.transition-all {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.tabs-trigger.active {
-    /* Tailwind: text-blue-600 border-blue-600 font-medium */
-    color: #2563eb; /* blue-600 */
-    border-bottom-color: #2563eb; /* blue-600 */
-    font-weight: 500;
-}
-
-.tab-content {
-    display: none;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-/* Placeholder color (Tailwind class placeholder-slate-400 is used in HTML) */
-/* You can define a general placeholder style if needed */
-/*
+/* Input placeholder styles */
 input::placeholder,
 textarea::placeholder {
-    color: #94a3b8; // slate-400
+    color: #9ca3af;
     opacity: 1;
 }
-*/
 
-/* Button disabled state (Tailwind handles this with disabled:opacity-50 disabled:cursor-not-allowed) */
-/* button:disabled {
-    cursor: not-allowed;
-    opacity: 0.65; // Example, Tailwind's default is 0.5
-} */
-
-
-/* General button hover/active states if not fully covered by Tailwind on specific buttons */
-/* For example, if you have custom non-Tailwind buttons */
-/* .btn-hover:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+/* Focus ring for better accessibility */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
 }
 
-.btn-hover:active {
-    transform: translateY(0);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-} */
+/* Responsive adjustments */
+@media (max-width: 400px) {
+    body {
+        width: 100%;
+        min-width: 320px;
+    }
+    
+    .p-6 {
+        padding: 1rem;
+    }
+    
+    .px-6 {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}
 
-/* Ensure buttons have a default cursor if not specified */
-button {
-    cursor: pointer;
+/* Dark mode support (if needed in future) */
+@media (prefers-color-scheme: dark) {
+    /* Dark mode styles can be added here */
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .border-slate-200 {
+        border-color: #000;
+    }
+    
+    .text-slate-500 {
+        color: #000;
+    }
+    
+    .bg-slate-50 {
+        background-color: #fff;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .transition-all,
+    .btn-hover:hover,
+    .animate-spin {
+        transition: none;
+        animation: none;
+        transform: none;
+    }
+}
+
+/* Print styles */
+@media print {
+    body {
+        width: 100%;
+        background: white;
+    }
+    
+    .bg-gradient-to-br {
+        background: white;
+    }
+    
+    button {
+        display: none;
+    }
 } 
