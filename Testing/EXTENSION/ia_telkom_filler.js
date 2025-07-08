@@ -26,9 +26,7 @@ function fillFormFields(data) {
     // Type can be 'input', 'textarea', 'select', or 'date'
     function setFieldValue(selector, value, fieldName, type = 'input') {
         if (value === undefined || value === null || value === "Data belum ditemukan") {
-            // Don't try to fill if value is placeholder for "not found" or truly undefined/null
-            // unless it's an intentional empty string "" which means clear the field.
-            if (value !== "") {
+            if (value !== "") { // Allow intentional clearing with an empty string
                 console.log(`[ia_telkom_filler.js] No valid data for "${fieldName}" (selector: ${selector}). Skipping.`);
                 return;
             }
@@ -36,39 +34,44 @@ function fillFormFields(data) {
 
         const element = document.querySelector(selector);
         if (element) {
-            // For date inputs, ensure value is in YYYY-MM-DD or empty
+            let processedValue = value;
+            // Check if the field is a 'Temuan' or 'Rekomendasi' field and if the value is an array
+            if ((fieldName.toLowerCase().includes('temuan') || fieldName.toLowerCase().includes('rekomendasi')) && Array.isArray(value)) {
+                processedValue = value.map(item => `- ${item}`).join('\n');
+                console.log(`[ia_telkom_filler.js] Formatted array for "${fieldName}" to bulleted list.`);
+            }
+
+
             if (element.type === 'date') {
-                if (value === '' || /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-                    element.value = value;
+                if (processedValue === '' || /^\d{4}-\d{2}-\d{2}$/.test(processedValue)) {
+                    element.value = processedValue;
                 } else {
-                    console.warn(`[ia_telkom_filler.js] Invalid date format "${value}" for "${fieldName}" (selector: ${selector}). Expected YYYY-MM-DD. Skipping.`);
-                    errors.push(`Invalid date format for ${fieldName}: ${value}`);
-                    allFieldsFound = false; // Or a different error flag
+                    console.warn(`[ia_telkom_filler.js] Invalid date format "${processedValue}" for "${fieldName}" (selector: ${selector}). Expected YYYY-MM-DD. Skipping.`);
+                    errors.push(`Invalid date format for ${fieldName}: ${processedValue}`);
+                    allFieldsFound = false;
                     return;
                 }
             } else if (type === 'select') {
                 let optionFound = false;
                 for (let i = 0; i < element.options.length; i++) {
-                    if (element.options[i].value === String(value) || element.options[i].text === String(value)) {
+                    if (element.options[i].value === String(processedValue) || element.options[i].text === String(processedValue)) {
                         element.selectedIndex = i;
                         optionFound = true;
                         break;
                     }
                 }
-                if (!optionFound && value !== "") {
-                     console.warn(`[ia_telkom_filler.js] Option "${value}" not found for select "${fieldName}" (selector: ${selector}).`);
-                     // errors.push(`Option "${value}" not found for ${fieldName}`); // Decide if this is a critical error
+                if (!optionFound && processedValue !== "") { // Don't warn if intentionally clearing
+                     console.warn(`[ia_telkom_filler.js] Option "${processedValue}" not found for select "${fieldName}" (selector: ${selector}).`);
                 }
             } else { // input, textarea
-                element.value = value;
+                element.value = processedValue;
             }
-            // Dispatch input and change events
+
             element.dispatchEvent(new Event('input', { bubbles: true }));
             element.dispatchEvent(new Event('change', { bubbles: true }));
-            console.log(`[ia_telkom_filler.js] Set "${fieldName}" (selector: ${selector}) to "${value}"`);
+            console.log(`[ia_telkom_filler.js] Set "${fieldName}" (selector: ${selector}) to (processed): "${processedValue}"`);
         } else {
             console.warn(`[ia_telkom_filler.js] Element with selector "${selector}" for field "${fieldName}" not found.`);
-            // Only consider it a critical error if data was actually provided for this field
             if (value !== "" && value !== undefined && value !== null && value !== "Data belum ditemukan") {
                 errors.push(`Field "${fieldName}" (selector: ${selector}) not found on page.`);
                 allFieldsFound = false;
