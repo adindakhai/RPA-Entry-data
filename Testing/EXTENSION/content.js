@@ -217,76 +217,267 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
       } catch (e) { console.warn("Error ekstraksi Rekomendasi ND SVP IA:", e); }
 
-      // Enhancement: Extract new fields
+      // Revised extraction logic based on new user guidance:
+
+      // Nomor ND SVP IA (refined - already uses getTextFromTable, but if not found, try keywords)
+      if (data.nomorNdSvpIa === "Data belum ditemukan") {
+        const nomorKeywords = ["nomor nd", "nota dinas", "no."]; // Removed "nomor" alone to avoid false positives
+        for (const keyword of nomorKeywords) {
+            const regex = new RegExp(`${keyword}\\s*[:\\s]*([\\w\\/\\.\\-]+)`, "i");
+            const match = fullTextContent.substring(0, Math.min(fullTextContent.length, 500)).match(regex); // Search in header part
+            if (match && match[1]) {
+                data.nomorNdSvpIa = cleanText(match[1]);
+                break;
+            }
+        }
+      }
+      // Deskripsi ND SVP IA (Perihal) (refined - already uses getTextFromTable, but if not found, try keywords)
+      if (data.deskripsiNdSvpIa === "Data belum ditemukan") {
+        const perihalKeywords = ["perihal", "subject", "hal"];
+        for (const keyword of perihalKeywords) {
+            const regex = new RegExp(`(?:^|\\n)${keyword}\\s*[:\\s]*([^\\n]+)`, "i");
+            const match = fullTextContent.substring(0, Math.min(fullTextContent.length, 700)).match(regex); // Search in header part
+            if (match && match[1]) {
+                data.deskripsiNdSvpIa = cleanText(match[1]);
+                break;
+            }
+        }
+      }
+      // Tanggal ND SVP IA (already good, uses dateRegex on isisuratElement, last match before "Nama Pejabat")
+      // No SPK (already good, uses spkRegex)
+      // Masa Penyelesaian Pekerjaan (already good, uses masaRegex)
+      // Temuan ND SVP IA (already good, uses ofiKeywords and ofiRegex)
+      // Rekomendasi ND SVP IA (Refined to include specific phrase)
       try {
-        const codeRegex = /(?:project\s+)?code\s*[:\-\s]*([\w\/\.\-]+)/i;
-        const codeMatch = fullTextContent.match(codeRegex);
-        if (codeMatch && codeMatch[1]) data.code = cleanText(codeMatch[1].toUpperCase());
+        const rekomendasiSvpIaKeywords = ["rekomendasi", "kami menyampaikan rekomendasi"];
+        // Look for keyword then capture, or specific phrase then capture
+        const rekSvpIaRegex = new RegExp(`(?:${rekomendasiSvpIaKeywords.join('\\s*[:\\n\\s.-]*|')}\\s*)([\\s\\S]*?)(?=(?:tindak\\s+lanjut|penutup|hormat kami|demikian|\\n\\n[\\w\\s]{20,}|\\Z))`, "i");
+        const rekomendasiSvpIaMatch = fullTextContent.match(rekSvpIaRegex);
+        if (rekomendasiSvpIaMatch && rekomendasiSvpIaMatch[1] && rekomendasiSvpIaMatch[1].trim()) {
+          data.rekomendasiNdSvpIa = cleanText(rekomendasiSvpIaMatch[1].substring(0, 500));
+        }
+      } catch (e) { console.warn("Error ekstraksi Rekomendasi ND SVP IA (refined):", e); }
+
+
+      // CODE
+      try {
+        const codeKeywords = ["kode", "code", "audit code", "kode temuan", "project code"];
+        for (const keyword of codeKeywords) {
+            const regex = new RegExp(`${keyword}\\s*[:\\s-]*([\\w\\/\\.\\-]+)`, "i");
+            const match = fullTextContent.match(regex);
+            if (match && match[1]) {
+                data.code = cleanText(match[1].toUpperCase());
+                break;
+            }
+        }
       } catch (e) { console.warn("Error ekstraksi CODE:", e); }
 
+      // Matriks Program & Tanggal Matriks
       try {
-        const matriksProgramRegex = /matriks\s+program\s*[:\-\s]*([^\n]+)/i;
-        const matriksProgramMatch = fullTextContent.match(matriksProgramRegex);
-        if (matriksProgramMatch && matriksProgramMatch[1]) data.matriksProgram = cleanText(matriksProgramMatch[1]);
-      } catch (e) { console.warn("Error ekstraksi Matriks Program:", e); }
+        const matriksKeywords = ["matriks program", "program kerja audit tahunan", "pkat", "pknat", "audit tahunan", "matriks"];
+        for (const keyword of matriksKeywords) {
+            const regex = new RegExp(`${keyword}\\s*[:\\s-]*([^\\n]+)(?:.*tanggal\\s*[:\\s-]*(\\d{1,2}\\s+\\w+\\s+\\d{4}))?`, "i");
+            const match = fullTextContent.match(regex);
+            if (match && match[1]) {
+                data.matriksProgram = cleanText(match[1]);
+                if (match[2]) { // If tanggal is captured in the same line/context
+                    data.tanggalMatriks = cleanText(match[2]);
+                }
+                break;
+            }
+        }
+        // If Tanggal Matriks not found with Matriks Program, try standalone
+        if (data.tanggalMatriks === "Data belum ditemukan") {
+            const tglMatriksKeywords = ["tanggal matriks", "tanggal pkat", "tanggal pknat"];
+             for (const keyword of tglMatriksKeywords) {
+                const regex = new RegExp(`${keyword}\\s*[:\\s-]*(\\d{1,2}\\s+\\w+\\s+\\d{4})`, "i");
+                const match = fullTextContent.match(regex);
+                if (match && match[1]) {
+                    data.tanggalMatriks = cleanText(match[1]);
+                    break;
+                }
+            }
+        }
+      } catch (e) { console.warn("Error ekstraksi Matriks Program/Tanggal Matriks:", e); }
+
+      // Kelompok
+      try {
+        const kelompokKeywords = ["kelompok temuan", "jenis temuan", "kategori temuan", "kelompok:"];
+        for (const keyword of kelompokKeywords) {
+            const regex = new RegExp(`${keyword}\\s*[:\\s-]*([^\\n]+)`, "i");
+            const match = fullTextContent.match(regex);
+            if (match && match[1]) {
+                data.kelompok = cleanText(match[1]);
+                break;
+            }
+        }
+      } catch (e) { console.warn("Error ekstraksi Kelompok:", e); }
+
+      // --- ND DIRUT Fields ---
+      const ndDirutContextRegex = /nota dinas direktur utama|nd dirut|kepada direktur utama/i;
+      const dirutSectionMatch = fullTextContent.match(ndDirutContextRegex);
+      let dirutText = fullTextContent; // Default to full text if no specific section found
+
+      if (dirutSectionMatch) {
+          // Try to narrow down the search text if a clear "ND Dirut" section header is found
+          // This is a simple approach; more complex documents might need smarter segmentation
+          const searchStartIndex = dirutSectionMatch.index;
+          dirutText = fullTextContent.substring(searchStartIndex);
+      }
 
       try {
-        const tanggalMatriksRegex = /tanggal\s+matriks\s*[:\-\s]*(\d{1,2}\s+\w+\s+\d{4})/i;
-        const tanggalMatriksMatch = fullTextContent.match(tanggalMatriksRegex);
-        if (tanggalMatriksMatch && tanggalMatriksMatch[1]) data.tanggalMatriks = cleanText(tanggalMatriksMatch[1]);
-      } catch (e) { console.warn("Error ekstraksi Tanggal Matriks:", e); }
-
-      // ND Dirut Fields (example regexes, may need refinement)
-      try {
-        const nomorNdDirutRegex = /nomor\s+nd\s+dirut\s*[:\-\s]*([\w\/\.\-]+)/i;
-        const nomorNdDirutMatch = fullTextContent.match(nomorNdDirutRegex);
-        if (nomorNdDirutMatch && nomorNdDirutMatch[1]) data.nomorNdDirut = cleanText(nomorNdDirutMatch[1]);
+        const nomorNdDirutKeywords = ["nomor nd dirut", "nd dirut nomor"];
+        for (const keyword of nomorNdDirutKeywords) {
+            const regex = new RegExp(`${keyword}\\s*[:\\s-]*([\\w\\/\\.\\-]+)`, "i");
+            const match = dirutText.match(regex);
+            if (match && match[1]) {
+                data.nomorNdDirut = cleanText(match[1]);
+                break;
+            }
+        }
       } catch (e) { console.warn("Error ekstraksi Nomor ND Dirut:", e); }
 
       try {
-        const deskripsiNdDirutRegex = /perihal\s+nd\s+dirut\s*[:\-\s]*([^\n]+)/i;
-        const deskripsiNdDirutMatch = fullTextContent.match(deskripsiNdDirutRegex);
-        if (deskripsiNdDirutMatch && deskripsiNdDirutMatch[1]) data.deskripsiNdDirut = cleanText(deskripsiNdDirutMatch[1]);
+        const deskripsiNdDirutKeywords = ["perihal nd dirut", "hal nd dirut"];
+         for (const keyword of deskripsiNdDirutKeywords) {
+            const regex = new RegExp(`${keyword}\\s*[:\\s-]*([^\\n]+)`, "i");
+            const match = dirutText.match(regex);
+            if (match && match[1]) {
+                data.deskripsiNdDirut = cleanText(match[1]);
+                break;
+            }
+        }
       } catch (e) { console.warn("Error ekstraksi Deskripsi ND Dirut:", e); }
 
       try {
-        const tanggalNdDirutRegex = /tanggal\s+nd\s+dirut\s*[:\-\s]*(\d{1,2}\s+\w+\s+\d{4})/i;
-        const tanggalNdDirutMatch = fullTextContent.match(tanggalNdDirutRegex);
-        if (tanggalNdDirutMatch && tanggalNdDirutMatch[1]) data.tanggalNdDirut = cleanText(tanggalNdDirutMatch[1]);
+        const tanggalNdDirutKeywords = ["tanggal nd dirut"];
+         for (const keyword of tanggalNdDirutKeywords) {
+            const regex = new RegExp(`${keyword}\\s*[:\\s-]*(\\d{1,2}\\s+\\w+\\s+\\d{4})`, "i");
+            const match = dirutText.match(regex);
+            if (match && match[1]) {
+                data.tanggalNdDirut = cleanText(match[1]);
+                break;
+            }
+        }
       } catch (e) { console.warn("Error ekstraksi Tanggal ND Dirut:", e); }
-      
+
       try {
-        const temuanNdDirutRegex = /(?:temuan|ofi)\s+nd\s+dirut\s*[:\n\s.-]*([\s\S]*?)(?=(?:rekomendasi\s+nd\s+dirut|\n\n[\w\s]{20,}|\Z))/i;
-        const temuanNdDirutMatch = fullTextContent.match(temuanNdDirutRegex);
-        if (temuanNdDirutMatch && temuanNdDirutMatch[1]) data.temuanNdDirut = cleanText(temuanNdDirutMatch[1].substring(0, 500));
+        const temuanNdDirutKeywords = ["temuan nd dirut", "ofi dirut"];
+        for (const keyword of temuanNdDirutKeywords) {
+            const regex = new RegExp(`${keyword}\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:rekomendasi nd dirut|rekomendasi dirut|tindak lanjut dirut|\\n\\n[\\w\\s]{20,}|\\Z))`, "i");
+            const match = dirutText.match(regex);
+            if (match && match[1] && match[1].trim()) {
+                data.temuanNdDirut = cleanText(match[1].substring(0, 500));
+                break;
+            }
+        }
       } catch (e) { console.warn("Error ekstraksi Temuan ND Dirut:", e); }
 
       try {
-        const rekomendasiNdDirutRegex = /rekomendasi\s+nd\s+dirut\s*[:\n\s.-]*([\s\S]*?)(?=(?:tindak\s+lanjut|penutup|hormat kami|demikian|\n\n[\w\s]{20,}|\Z))/i;
-        const rekomendasiNdDirutMatch = fullTextContent.match(rekomendasiNdDirutRegex);
-        if (rekomendasiNdDirutMatch && rekomendasiNdDirutMatch[1]) data.rekomendasiNdDirut = cleanText(rekomendasiNdDirutMatch[1].substring(0, 500));
+        const rekomendasiNdDirutKeywords = ["rekomendasi nd dirut", "rekomendasi dirut"];
+         for (const keyword of rekomendasiNdDirutKeywords) {
+            const regex = new RegExp(`${keyword}\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:pic dirut|uic dirut|due date dirut|tindak lanjut|penutup|hormat kami|demikian|\\n\\n[\\w\\s]{20,}|\\Z))`, "i");
+            const match = dirutText.match(regex);
+            if (match && match[1] && match[1].trim()) {
+                data.rekomendasiNdDirut = cleanText(match[1].substring(0, 500));
+                break;
+            }
+        }
       } catch (e) { console.warn("Error ekstraksi Rekomendasi ND Dirut:", e); }
 
+      // Duedate ND Dirut
       try {
-        const duedateNdDirutRegex = /(?:due\s*date|tanggal\s+jatuh\s+tempo)\s+nd\s+dirut\s*[:\-\s]*([^\n]+)/i;
-        const duedateNdDirutMatch = fullTextContent.match(duedateNdDirutRegex);
-        if (duedateNdDirutMatch && duedateNdDirutMatch[1]) data.duedateNdDirut = cleanText(duedateNdDirutMatch[1]);
+        const duedateKeywords = ["paling lambat", "due\\s*date", "target penyelesaian", "tindak lanjut.*(?:tanggal|target)"];
+        // Search within "rencana tindak lanjut" context if possible, or general text for ND Dirut
+        const duedateContextRegex = new RegExp(`(?:rencana tindak lanjut|action plan).*nd dirut([\\s\\S]*?)(?:\\n\\n|$)`, "i");
+        let duedateSearchText = dirutText;
+        const duedateContextMatch = dirutText.match(duedateContextRegex);
+        if (duedateContextMatch && duedateContextMatch[1]) {
+            duedateSearchText = duedateContextMatch[1];
+        }
+
+        for (const keyword of duedateKeywords) {
+            // Regex tries to capture a date, or a phrase indicating a period
+            const regex = new RegExp(`${keyword}\\s*[:\\s-]*((?:\\d{1,2}\\s+\\w+\\s+\\d{4})|[^\\n\\.,]+(?:minggu|bulan|hari|triwulan|semester|tahun))`, "i");
+            const match = duedateSearchText.match(regex);
+            if (match && match[1]) {
+                data.duedateNdDirut = cleanText(match[1]);
+                break;
+            }
+        }
       } catch (e) { console.warn("Error ekstraksi Duedate ND Dirut:", e); }
 
+      // PIC ND Dirut & UIC ND Dirut
       try {
-        const picNdDirutRegex = /pic\s+nd\s+dirut\s*[:\-\s]*([^\n]+)/i;
-        const picNdDirutMatch = fullTextContent.match(picNdDirutRegex);
-        if (picNdDirutMatch && picNdDirutMatch[1]) data.picNdDirut = cleanText(picNdDirutMatch[1]);
-      } catch (e) { console.warn("Error ekstraksi PIC ND Dirut:", e); }
+        const picKeywords = ["pic", "penanggung jawab", "auditee", "manajemen terkait"];
+        const uicKeywords = ["uic", "unit kerja", "divisi", "direktorat"];
+        // Try to find these in context of recommendations or action plans for Dirut
+        const actionPlanContextRegex = /(?:rekomendasi nd dirut|tindak lanjut nd dirut)([\s\S]*?)(?:\n\n\w{5,}|\Z)/i;
+        let actionPlanText = dirutText;
+        const actionPlanMatch = dirutText.match(actionPlanContextRegex);
+        if(actionPlanMatch && actionPlanMatch[1]) {
+            actionPlanText = actionPlanMatch[1];
+        }
 
+        for (const keyword of picKeywords) {
+            const regex = new RegExp(`${keyword}\\s*[:\\s-]*([^\\n,]+)`, "i");
+            const match = actionPlanText.match(regex);
+            if (match && match[1]) {
+                data.picNdDirut = cleanText(match[1]);
+                break;
+            }
+        }
+        // Search for UIC in document beginning if not found near action plan
+        if(data.uicNdDirut === "Data belum ditemukan"){
+            for (const keyword of uicKeywords) {
+                const regex = new RegExp(`(?:${keyword}|kepada\\s*[:\\s-]*ykh\\.?\\s*([^\\n]+(?:${uicKeywords.join('|')})[^\\n]*))`, "i");
+                const match = fullTextContent.substring(0, Math.min(fullTextContent.length, 1000)).match(regex); // Search in header
+                if (match && match[1]) {
+                     data.uicNdDirut = cleanText(match[1].replace(/ykh\.?\s*/i, ''));
+                     break;
+                } else if (match && match[0].toLowerCase().includes(keyword)) { // If keyword itself matched
+                     const simpleRegex = new RegExp(`${keyword}\\s*[:\\s-]*([^\\n,]+)`, "i");
+                     const simpleMatch = fullTextContent.substring(0, Math.min(fullTextContent.length, 1000)).match(simpleRegex);
+                     if(simpleMatch && simpleMatch[1]){
+                        data.uicNdDirut = cleanText(simpleMatch[1]);
+                        break;
+                     }
+                }
+            }
+        }
+         // Fallback for UIC if still not found, search in actionPlanText again
+        if(data.uicNdDirut === "Data belum ditemukan"){
+            for (const keyword of uicKeywords) {
+                const regex = new RegExp(`${keyword}\\s*[:\\s-]*([^\\n,]+)`, "i");
+                const match = actionPlanText.match(regex);
+                if (match && match[1]) {
+                    data.uicNdDirut = cleanText(match[1]);
+                    break;
+                }
+            }
+        }
+
+      } catch (e) { console.warn("Error ekstraksi PIC/UIC ND Dirut:", e); }
+
+      // Status (Opportunistic search in conclusion)
       try {
-        const uicNdDirutRegex = /uic\s+nd\s+dirut\s*[:\-\s]*([^\n]+)/i;
-        const uicNdDirutMatch = fullTextContent.match(uicNdDirutRegex);
-        if (uicNdDirutMatch && uicNdDirutMatch[1]) data.uicNdDirut = cleanText(uicNdDirutMatch[1]);
-      } catch (e) { console.warn("Error ekstraksi UIC ND Dirut:", e); }
+        const statusKeywords = ["status\\s*:\\s*([^\\n]+)", "(closed)", "(sudah ditindaklanjuti)", "(selesai)"];
+        const conclusionText = fullTextContent.substring(Math.max(0, fullTextContent.length - 500)); // Last 500 chars
+        for (const keyword of statusKeywords) {
+            const regex = new RegExp(keyword, "i");
+            const match = conclusionText.match(regex);
+            if (match && match[1]) { // For "status : value"
+                data.status = cleanText(match[1]);
+                break;
+            } else if (match && match[0]) { // For keywords in parentheses
+                 data.status = cleanText(match[0].replace(/[()]/g, ''));
+                 break;
+            }
+        }
+      } catch (e) { console.warn("Error ekstraksi Status:", e); }
 
 
-      if (data.mtlClosed === 1) data.status = "Closed";
+      if (data.mtlClosed === 1) data.status = "Closed"; // This logic might need review if status text is now extracted
       else if (data.reschedule === 1) data.status = "Reschedule";
       else if (data.overdue === 1) data.status = "Overdue";
       else if (data.onSchedule === 1) data.status = "OnSchedule";
@@ -460,6 +651,127 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       // if (data.picNdDirut === "Data belum ditemukan") data.picNdDirut = getTextAfterLabel("pic nd dirut");
       // if (data.uicNdDirut === "Data belum ditemukan") data.uicNdDirut = getTextAfterLabel("uic nd dirut");
 
+      // More robust keyword-based extraction for standard HTML
+      const allTextElements = Array.from(document.querySelectorAll('p, span, div, td, li, h1, h2, h3, h4, strong'));
+
+      // Helper to find value after keyword in an element's text or subsequent text nodes/elements
+      const extractValueAfterKeyword = (elements, keywords, regexPattern, contextKeywords = []) => {
+          for (const el of elements) {
+              const elText = el.innerText || el.textContent || "";
+              if (!elText.trim()) continue;
+
+              let relevantText = elText.toLowerCase();
+              let foundContext = contextKeywords.length === 0; // True if no context needed
+              if (contextKeywords.length > 0) {
+                  if (contextKeywords.some(ck => relevantText.includes(ck.toLowerCase()))) {
+                      foundContext = true;
+                  } else { // Check parent elements for context too, up to 3 levels
+                      let parent = el.parentElement;
+                      for (let i = 0; i < 3 && parent; i++) {
+                          if (parent.innerText && contextKeywords.some(ck => parent.innerText.toLowerCase().includes(ck.toLowerCase()))) {
+                              foundContext = true;
+                              relevantText = parent.innerText.toLowerCase(); // Use parent text if context found here
+                              break;
+                          }
+                          parent = parent.parentElement;
+                      }
+                  }
+              }
+
+              if (!foundContext) continue;
+
+              for (const keyword of keywords) {
+                  const keywordRegex = new RegExp(keyword.toLowerCase() + regexPattern, "i");
+                  const match = relevantText.match(keywordRegex);
+                  if (match && match[1] && match[1].trim()) {
+                      return cleanText(match[1]);
+                  }
+              }
+          }
+          return "Data belum ditemukan";
+      };
+
+      // Nomor ND SVP IA (fallback)
+      if (data.nomorNdSvpIa === "Data belum ditemukan") {
+        data.nomorNdSvpIa = extractValueAfterKeyword(allTextElements.slice(0, 30), ["nomor nd", "nota dinas", "no."], "\\s*[:\\s]*([\\w\\/\\.\\-]+)");
+      }
+      // Deskripsi ND SVP IA (fallback)
+      if (data.deskripsiNdSvpIa === "Data belum ditemukan") {
+         data.deskripsiNdSvpIa = extractValueAfterKeyword(allTextElements.slice(0,30), ["perihal", "subject", "hal"], "\\s*[:\\s]*([^\\n]+)");
+      }
+      // Tanggal ND SVP IA (fallback - search towards the end)
+      if (data.tanggalNdSvpIa === "Data belum ditemukan") {
+        const footerElements = allTextElements.slice(Math.max(0, allTextElements.length - 30));
+        data.tanggalNdSvpIa = extractValueAfterKeyword(footerElements, ["tanggal", ""], "\\s*[:\\s]*(\\d{1,2}\\s+\\w+\\s+\\d{4})"); // Empty keyword to catch dates near end
+      }
+
+      // No SPK
+      if (data.noSPK === "Data belum ditemukan") {
+        data.noSPK = extractValueAfterKeyword(allTextElements, ["spk", "surat perintah kerja", "nomor spk"], "\\s*[:\\s]*([\\w\\/\\.\\-]+)");
+      }
+      // CODE
+      if (data.code === "Data belum ditemukan") {
+        data.code = extractValueAfterKeyword(allTextElements, ["kode", "code", "audit code", "kode temuan"], "\\s*[:\\s]*([\\w\\/\\.\\-]+)").toUpperCase();
+      }
+      // Matriks Program & Tanggal Matriks
+      if (data.matriksProgram === "Data belum ditemukan") {
+        data.matriksProgram = extractValueAfterKeyword(allTextElements, ["matriks program", "pkat", "pknat", "program kerja audit tahunan"], "\\s*[:\\s-]*([^\\n]+(?:(?:program|matriks)[^\\n]*)?)");
+      }
+      if (data.tanggalMatriks === "Data belum ditemukan") {
+        data.tanggalMatriks = extractValueAfterKeyword(allTextElements, ["tanggal matriks", "tanggal pkat", "tanggal pknat"], "\\s*[:\\s-]*(\\d{1,2}\\s+\\w+\\s+\\d{4})", ["matriks", "pkat", "pknat"]);
+      }
+      // Kelompok
+      if (data.kelompok === "Data belum ditemukan") {
+        data.kelompok = extractValueAfterKeyword(allTextElements, ["kelompok temuan", "jenis temuan", "kategori temuan", "kelompok:"], "\\s*[:\\s-]*([^\\n]+)");
+      }
+      // Masa Penyelesaian Pekerjaan
+      if (data.masaPenyelesaianPekerjaan === "Data belum ditemukan") {
+        data.masaPenyelesaianPekerjaan = extractValueAfterKeyword(allTextElements, ["masa penyelesaian", "batas waktu", "selesai dalam"], "\\s*[:\\s-]*([^\\n]+(?:(?:minggu|bulan|hari)[^\\n]*)?)", ["due date", "target"]);
+      }
+
+      // ND Dirut Fields - using context keywords "ND Dirut", "Direktur Utama"
+      const dirutContext = ["nd dirut", "direktur utama"];
+      if (data.nomorNdDirut === "Data belum ditemukan") {
+        data.nomorNdDirut = extractValueAfterKeyword(allTextElements, ["nomor"], "\\s*[:\\s-]*([\\w\\/\\.\\-]+)", dirutContext);
+      }
+      if (data.deskripsiNdDirut === "Data belum ditemukan") {
+        data.deskripsiNdDirut = extractValueAfterKeyword(allTextElements, ["perihal", "hal"], "\\s*[:\\s-]*([^\\n]+)", dirutContext);
+      }
+      if (data.tanggalNdDirut === "Data belum ditemukan") {
+        data.tanggalNdDirut = extractValueAfterKeyword(allTextElements, ["tanggal"], "\\s*[:\\s-]*(\\d{1,2}\\s+\\w+\\s+\\d{4})", dirutContext);
+      }
+      if (data.temuanNdDirut === "Data belum ditemukan") {
+         data.temuanNdDirut = extractValueAfterKeyword(allTextElements, ["temuan", "ofi"], "\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:rekomendasi|tindak lanjut|\\n\\n[\\w\\s]{5,}|pic|uic|due date|$))", dirutContext);
+         if (data.temuanNdDirut !== "Data belum ditemukan") data.temuanNdDirut = data.temuanNdDirut.substring(0,500);
+      }
+      if (data.rekomendasiNdDirut === "Data belum ditemukan") {
+        data.rekomendasiNdDirut = extractValueAfterKeyword(allTextElements, ["rekomendasi", "kami menyampaikan rekomendasi"], "\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:pic|uic|due date|tindak lanjut|penutup|hormat kami|demikian|\\n\\n[\\w\\s]{5,}|$))", dirutContext);
+        if (data.rekomendasiNdDirut !== "Data belum ditemukan") data.rekomendasiNdDirut = data.rekomendasiNdDirut.substring(0,500);
+      }
+      if (data.duedateNdDirut === "Data belum ditemukan") {
+        data.duedateNdDirut = extractValueAfterKeyword(allTextElements, ["paling lambat", "due date", "target penyelesaian", "tindak lanjut.*(?:tanggal|target)"], "\\s*[:\\s-]*((?:\\d{1,2}\\s+\\w+\\s+\\d{4})|[^\\n\\.,]+(?:minggu|bulan|hari|triwulan|semester|tahun))", ["rencana tindak lanjut", "action plan"].concat(dirutContext));
+      }
+      if (data.picNdDirut === "Data belum ditemukan") {
+        data.picNdDirut = extractValueAfterKeyword(allTextElements, ["pic", "penanggung jawab", "auditee"], "\\s*[:\\s-]*([^\\n,]+)", ["rekomendasi", "tindak lanjut"].concat(dirutContext));
+      }
+      if (data.uicNdDirut === "Data belum ditemukan") {
+        // Search UIC in header context first
+        data.uicNdDirut = extractValueAfterKeyword(allTextElements.slice(0,30), ["uic", "unit kerja", "divisi", "direktorat", "kepada yth"], "\\s*[:\\s-]*([^\\n,]+)", dirutContext.length > 0 ? dirutContext : []);
+        if (data.uicNdDirut === "Data belum ditemukan") { // Fallback to general search if not in header context for dirut
+             data.uicNdDirut = extractValueAfterKeyword(allTextElements, ["uic", "unit kerja", "divisi", "direktorat"], "\\s*[:\\s-]*([^\\n,]+)", dirutContext);
+        }
+      }
+      // Status
+      if (data.status === "Data belum ditemukan") {
+        const footerElements = allTextElements.slice(Math.max(0, allTextElements.length - 20));
+        data.status = extractValueAfterKeyword(footerElements, ["status"], "\\s*[:\\s-]*([^\\n]+)");
+        if (data.status === "Data belum ditemukan") { // Fallback to simple keyword presence
+            if (footerElements.some(el => el.textContent.toLowerCase().includes("closed") || el.textContent.toLowerCase().includes("sudah ditindaklanjuti"))) data.status = "Closed";
+            else if (footerElements.some(el => el.textContent.toLowerCase().includes("reschedule"))) data.status = "Reschedule";
+            else if (footerElements.some(el => el.textContent.toLowerCase().includes("overdue"))) data.status = "Overdue";
+            else if (footerElements.some(el => el.textContent.toLowerCase().includes("on schedule"))) data.status = "OnSchedule";
+        }
+      }
 
       // For fields not in this HTML, they will retain "Data belum ditemukan"
       console.log("Asisten NDE: Standard HTML extraction attempt complete.");
