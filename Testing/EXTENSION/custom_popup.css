@@ -1,0 +1,112 @@
+/* Custom Popup Styles */
+.custom-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 10000; /* High z-index to ensure it's on top */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.custom-popup-dialog {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    width: 500px; /* Adjust as needed */
+    max-width: 90%;
+    max-height: 80vh; /* Max height for scrollability */
+    overflow-y: auto; /* Enable scroll for content */
+    z-index: 10001;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.custom-popup-dialog h2 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.5em;
+    color: #333;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.custom-popup-dialog .data-item {
+    margin-bottom: 10px;
+    font-size: 0.9em;
+}
+
+.custom-popup-dialog .data-item strong {
+    display: block;
+    margin-bottom: 3px;
+    color: #555;
+    font-weight: 600;
+}
+
+.custom-popup-dialog .data-item span {
+    display: block;
+    padding: 8px;
+    background-color: #f9f9f9;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    word-wrap: break-word; /* Ensure long text wraps */
+}
+
+.custom-popup-dialog .popup-actions {
+    margin-top: 20px;
+    text-align: right;
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+}
+
+.custom-popup-dialog .popup-actions button {
+    padding: 10px 15px;
+    margin-left: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 500;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.custom-popup-dialog .popup-actions .confirm-btn {
+    background-color: #4CAF50; /* Green */
+    color: white;
+}
+
+.custom-popup-dialog .popup-actions .confirm-btn:hover {
+    background-color: #45a049;
+}
+
+.custom-popup-dialog .popup-actions .cancel-btn {
+    background-color: #f44336; /* Red */
+    color: white;
+}
+
+.custom-popup-dialog .popup-actions .cancel-btn:hover {
+    background-color: #e53935;
+}
+
+.custom-popup-dialog .popup-actions .edit-btn {
+    background-color: #2196F3; /* Blue */
+    color: white;
+}
+
+.custom-popup-dialog .popup-actions .edit-btn:hover {
+    background-color: #1e88e5;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.custom-popup-dialog::-webkit-scrollbar {
+    display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.custom-popup-dialog {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}

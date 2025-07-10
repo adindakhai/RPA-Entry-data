@@ -9,22 +9,20 @@
     <style>
         body { 
             width: 380px; 
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             min-height: 500px;
         }
     </style>
 </head>
-<body class="bg-slate-50">
+<body class="bg-gradient-to-br from-slate-50 to-blue-50">
     <!-- Header -->
-    <div class="bg-white border-b border-slate-200 px-4 py-3">
-        <div class="flex items-center space-x-2">
-            <div class="w-8 h-8 flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-blue-600">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-                </svg>
+    <div class="bg-white border-b border-slate-200 px-6 py-4">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
+                <i class="fas fa-file-alt text-white text-lg"></i>
             </div>
             <div>
-                <h1 class="text-md font-semibold text-slate-700">NDE Data Assistant</h1>
+                <h1 class="text-lg font-bold text-slate-800">NDE Data Assistant</h1>
             </div>
         </div>
     </div>
@@ -44,233 +42,127 @@
     </div>
 
     <!-- Data Display Section (form) -->
-    <div id="data-display" class="hidden px-4 pt-4 space-y-4">
-        <div class="space-y-3 max-h-96 overflow-y-auto custom-scrollbar pr-2">
-            <!-- Basic Information Section -->
-            <div class="space-y-2">
-                <div class="grid grid-cols-1 gap-2">
+    <div id="data-display" class="p-6 space-y-5">
+        <div class="space-y-4 max-h-96 overflow-y-auto custom-scrollbar pr-2">
+            <div class="space-y-3">
+                <div class="grid grid-cols-1 gap-3">
                     <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">Document Number</label>
-                        <input id="popup-nomor-nota" type="text" 
-                               class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all"
-                               placeholder="Enter document number">
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">No SPK</label>
+                        <input id="popup-no-spk" type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all" placeholder="No SPK">
                     </div>
                     <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">Subject</label>
-                        <input id="popup-perihal" type="text" 
-                               class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all"
-                               placeholder="Enter subject">
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">Kelompok</label>
+                        <input id="popup-kelompok" type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all" placeholder="Kelompok">
                     </div>
                     <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">Sender</label>
-                        <input id="popup-pengirim" type="text" 
-                               class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all"
-                               placeholder="Enter sender name">
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">CODE</label>
+                        <input id="popup-code" type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all" placeholder="CODE">
                     </div>
                     <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">Attachment ID (from i-frame)</label>
-                        <input id="popup-id-lampiran" type="text" 
-                               class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all"
-                               placeholder="Enter attachment ID">
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">Masa penyelesaian pekerjaan</label>
+                        <input id="popup-masa-penyelesaian" type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all" placeholder="Masa penyelesaian pekerjaan">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">Matriks Program</label>
+                        <input id="popup-matriks-program" type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all" placeholder="Matriks Program">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">Tanggal Matriks</label>
+                        <input id="popup-tanggal-matriks" type="date" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all" placeholder="Tanggal Matriks">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">Nomor ND SVP IA</label>
+                        <input id="popup-nd-svp-ia-nomor" type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all" placeholder="Nomor ND SVP IA">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">Deskripsi ND SVP IA</label>
+                        <textarea id="popup-nd-svp-ia-deskripsi" rows="2" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all resize-none" placeholder="Deskripsi ND SVP IA"></textarea>
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">Tanggal ND SVP IA</label>
+                        <input id="popup-nd-svp-ia-tanggal" type="date" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all" placeholder="Tanggal ND SVP IA">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">Temuan ND SVP IA</label>
+                        <textarea id="popup-nd-svp-ia-temuan" rows="2" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all resize-none" placeholder="Temuan ND SVP IA"></textarea>
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">Rekomendasi ND SVP IA</label>
+                        <textarea id="popup-nd-svp-ia-rekomendasi" rows="2" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all resize-none" placeholder="Rekomendasi ND SVP IA"></textarea>
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">Nomor ND Dirut</label>
+                        <input id="popup-nd-dirut-nomor" type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all" placeholder="Nomor ND Dirut">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">Deskripsi ND Dirut</label>
+                        <textarea id="popup-nd-dirut-deskripsi" rows="2" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all resize-none" placeholder="Deskripsi ND Dirut"></textarea>
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">Tanggal ND Dirut</label>
+                        <input id="popup-nd-dirut-tanggal" type="date" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all" placeholder="Tanggal ND Dirut">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">Temuan ND Dirut</label>
+                        <textarea id="popup-nd-dirut-temuan" rows="2" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all resize-none" placeholder="Temuan ND Dirut"></textarea>
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">Rekomendasi ND Dirut</label>
+                        <textarea id="popup-nd-dirut-rekomendasi" rows="2" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all resize-none" placeholder="Rekomendasi ND Dirut"></textarea>
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">Duedate ND Dirut</label>
+                        <input id="popup-nd-dirut-duedate" type="date" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all" placeholder="Duedate ND Dirut">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">PIC ND Dirut</label>
+                        <input id="popup-nd-dirut-pic" type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all" placeholder="PIC ND Dirut">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">UIC ND Dirut</label>
+                        <input id="popup-nd-dirut-uic" type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all" placeholder="UIC ND Dirut">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">MTL Closed</label>
+                        <input id="popup-mtl-closed" type="number" min="0" step="1" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all" placeholder="MTL Closed">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">Reschedule</label>
+                        <input id="popup-reschedule" type="number" min="0" step="1" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all" placeholder="Reschedule">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">Overdue</label>
+                        <input id="popup-overdue" type="number" min="0" step="1" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all" placeholder="Overdue">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">OnSchedule</label>
+                        <input id="popup-onschedule" type="number" min="0" step="1" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all" placeholder="OnSchedule">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-slate-600 mb-1.5 block">Status</label>
+                        <input id="popup-status" type="text" class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all" placeholder="Status">
                     </div>
                 </div>
             </div>
-            <!-- SVP IA Information Section -->
-            <div class="space-y-2">
-                <div class="grid grid-cols-1 gap-2">
-                    <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">SPK Number</label>
-                        <input id="popup-no-spk" type="text" 
-                               class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all"
-                               placeholder="Enter SPK number">
-                    </div>
-                    <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">ND SVP IA Date</label>
-                        <input id="popup-tanggal-nd-svp-ia" type="text" 
-                               class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all"
-                               placeholder="Enter date">
-                    </div>
-                    <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">ND SVP IA Findings</label>
-                        <textarea id="popup-temuan-nd-svp-ia" rows="3" 
-                                  class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all resize-none"
-                                  placeholder="Enter findings"></textarea>
-                    </div>
-                    <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">ND SVP IA Recommendations</label>
-                        <textarea id="popup-rekomendasi-nd-svp-ia" rows="3" 
-                                  class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all resize-none"
-                                  placeholder="Enter recommendations"></textarea>
-                    </div>
-                </div>
-            </div>
-
-            <!-- MTL General Fields Section -->
-            <div class="space-y-2 pt-3">
-                <h3 class="text-sm font-semibold text-slate-700 border-b pb-2 mb-3">MTL General Fields</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">Kelompok</label>
-                        <input id="popup-kelompok" type="text"
-                               class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all"
-                               placeholder="Enter Kelompok">
-                    </div>
-                    <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">CODE</label>
-                        <input id="popup-code" type="text"
-                               class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all"
-                               placeholder="Enter CODE">
-                    </div>
-                    <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">Masa Penyelesaian Pekerjaan</label>
-                        <input id="popup-masa-penyelesaian" type="text"
-                               class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all"
-                               placeholder="Enter Masa Penyelesaian">
-                    </div>
-                    <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">Matriks Program</label>
-                        <input id="popup-matriks-program" type="text"
-                               class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all"
-                               placeholder="Enter Matriks Program">
-                    </div>
-                    <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">Tanggal Matriks</label>
-                        <input id="popup-tanggal-matriks" type="date"
-                               class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all"
-                               placeholder="YYYY-MM-DD">
-                    </div>
-                </div>
-            </div>
-
-            <!-- ND Dirut Information Section -->
-            <div class="space-y-2 pt-3">
-                <h3 class="text-sm font-semibold text-slate-700 border-b pb-2 mb-3">ND Dirut Information</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">Nomor ND Dirut</label>
-                        <input id="popup-nd-dirut-nomor" type="text"
-                               class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all"
-                               placeholder="Enter Nomor ND Dirut">
-                    </div>
-                    <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">Tanggal ND Dirut</label>
-                        <input id="popup-nd-dirut-tanggal" type="date"
-                               class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all"
-                               placeholder="YYYY-MM-DD">
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 gap-2">
-                    <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">Deskripsi ND Dirut</label>
-                        <textarea id="popup-nd-dirut-deskripsi" rows="3"
-                                  class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all resize-none"
-                                  placeholder="Enter Deskripsi ND Dirut"></textarea>
-                    </div>
-                    <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">Temuan ND Dirut</label>
-                        <textarea id="popup-nd-dirut-temuan" rows="3"
-                                  class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all resize-none"
-                                  placeholder="Enter Temuan ND Dirut"></textarea>
-                    </div>
-                    <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">Rekomendasi ND Dirut</label>
-                        <textarea id="popup-nd-dirut-rekomendasi" rows="3"
-                                  class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all resize-none"
-                                  placeholder="Enter Rekomendasi ND Dirut"></textarea>
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">Duedate ND Dirut 1</label>
-                        <input id="popup-nd-dirut-duedate1" type="date"
-                               class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all"
-                               placeholder="YYYY-MM-DD">
-                    </div>
-                    <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">Duedate ND Dirut 2</label>
-                        <input id="popup-nd-dirut-duedate2" type="date"
-                               class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all"
-                               placeholder="YYYY-MM-DD">
-                    </div>
-                    <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">PIC ND Dirut</label>
-                        <input id="popup-nd-dirut-pic" type="text"
-                               class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all"
-                               placeholder="Enter PIC ND Dirut">
-                    </div>
-                    <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">UIC ND Dirut</label>
-                        <input id="popup-nd-dirut-uic" type="text"
-                               class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all"
-                               placeholder="Enter UIC ND Dirut">
-                    </div>
-                </div>
-            </div>
-
-            <!-- MTL Status Fields Section -->
-            <div class="space-y-2 pt-3">
-                <h3 class="text-sm font-semibold text-slate-700 border-b pb-2 mb-3">MTL Status</h3>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">MTL Closed</label>
-                        <input id="popup-mtl-closed" type="number" min="0" step="1"
-                               class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all"
-                               placeholder="0 or 1">
-                    </div>
-                    <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">Reschedule</label>
-                        <input id="popup-reschedule" type="number" min="0" step="1"
-                               class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all"
-                               placeholder="0 or 1">
-                    </div>
-                    <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">Overdue</label>
-                        <input id="popup-overdue" type="number" min="0" step="1"
-                               class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all"
-                               placeholder="0 or 1">
-                    </div>
-                    <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">OnSchedule</label>
-                        <input id="popup-onschedule" type="number" min="0" step="1"
-                               class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all"
-                               placeholder="0 or 1">
-                    </div>
-                </div>
-                <div class="grid grid-cols-1">
-                     <div>
-                        <label class="text-xs font-medium text-slate-600 mb-1 block">Status</label>
-                        <input id="popup-status" type="text"
-                               class="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm input-focus transition-all"
-                               placeholder="Enter Status (e.g., OnSchedule)">
-                    </div>
-                </div>
-            </div>
-
         </div>
     </div>
 
     <!-- Action Buttons -->
-    <div class="space-y-2 pt-3 px-4">
+    <div class="space-y-3 pt-4 px-6">
         <button id="get-data-btn" 
-                class="w-full bg-blue-600 text-white font-medium py-2.5 px-4 rounded-md hover:bg-blue-700 btn-hover transition-all flex items-center justify-center space-x-2">
-            <i class="fas fa-download text-xs"></i>
+                class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold py-3 px-4 rounded-lg hover:from-blue-600 hover:to-blue-700 btn-hover transition-all flex items-center justify-center space-x-2">
+            <i class="fas fa-download text-sm"></i>
             <span>Extract Data</span>
         </button>
         <button id="send-data-btn" 
-                class="w-full bg-white text-blue-600 border border-blue-600 font-medium py-2.5 px-4 rounded-md hover:bg-blue-50 btn-hover transition-all disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-300 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2"
+                class="w-full bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold py-3 px-4 rounded-lg hover:from-green-600 hover:to-green-700 btn-hover transition-all disabled:from-slate-400 disabled:to-slate-500 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2"
                 disabled>
-            <i class="fas fa-paper-plane text-xs"></i>
+            <i class="fas fa-paper-plane text-sm"></i>
             <span>Send to MTL</span>
-        </button>
-        <button id="cancel-data-btn"
-                class="w-full bg-slate-500 text-white font-medium py-2.5 px-4 rounded-md hover:bg-slate-600 btn-hover transition-all flex items-center justify-center space-x-2"
-                style="display: none;"> <!-- Initially hidden, shown by JS in iframe mode -->
-            <i class="fas fa-times text-xs"></i>
-            <span>Cancel</span>
         </button>
     </div>
 
-    <div class="bg-slate-100 border-t border-slate-200 px-4 py-2 mt-3">
+    <div class="bg-slate-50 border-t border-slate-200 px-6 py-3 mt-4">
         <p class="text-xs text-slate-500 text-center">
             NDE Data Assistant v1.0
         </p>
