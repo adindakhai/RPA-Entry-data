@@ -189,8 +189,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 OnSchedule: onscheduleInput.value !== '' ? Number(onscheduleInput.value) : 1,
                 Status: statusInput.value || '',
             };
+            // Remove masaPenyelesaianPekerjaan if it's empty and we don't want to send it
+            // However, the original code sent it, so keeping it for now.
+            // if (!dataForMTL.masaPenyelesaianPekerjaan) delete dataForMTL.masaPenyelesaianPekerjaan;
 
-            // Find the IA Telkom.mhtml tab
+            // ############# JULES: ADDED DETAILED LOG #############
+            console.log("[popup.js] --- BEGINNING OF DATA FOR MTL ---");
+            console.log("[popup.js] Data being sent to ia_telkom_filler.js:", JSON.stringify(dataForMTL, null, 2));
+            console.log("[popup.js] --- END OF DATA FOR MTL ---");
+            // ############# JULES: END OF ADDED LOG #############
+
+            console.log("[popup.js] Prepared dataForMTL:", dataForMTL);
+
+            // Query for IA Telkom.mhtml tab
             chrome.tabs.query({ url: "file:///*" }, (tabs) => {
                 const mtlTabs = tabs.filter(tab => {
                     if (tab.url) {
