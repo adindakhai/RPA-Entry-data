@@ -119,15 +119,33 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (matriksProgramInput) matriksProgramInput.value = safeSet(data.matriksProgram);
                     if (tanggalMatriksInput) tanggalMatriksInput.value = formatDateForInput(safeSet(data.tanggalMatriks));
                     if (nomorNdSvpIaInput) nomorNdSvpIaInput.value = safeSet(data.nomorNdSvpIa);
-                    if (deskripsiNdSvpIaInput) deskripsiNdSvpIaInput.value = safeSet(data.deskripsiNdSvpIa);
+                    if (deskripsiNdSvpIaInput) {
+                        deskripsiNdSvpIaInput.value = safeSet(data.deskripsiNdSvpIa);
+                        autoResizeTextarea(deskripsiNdSvpIaInput);
+                    }
                     if (tanggalNdSvpIaInput) tanggalNdSvpIaInput.value = formatDateForInput(safeSet(data.tanggalNdSvpIa));
-                    if (temuanNdSvpIaInput) temuanNdSvpIaInput.value = safeSet(data.temuanNdSvpIa);
-                    if (rekomendasiNdSvpIaInput) rekomendasiNdSvpIaInput.value = safeSet(data.rekomendasiNdSvpIa);
+                    if (temuanNdSvpIaInput) {
+                        temuanNdSvpIaInput.value = safeSet(data.temuanNdSvpIa);
+                        autoResizeTextarea(temuanNdSvpIaInput);
+                    }
+                    if (rekomendasiNdSvpIaInput) {
+                        rekomendasiNdSvpIaInput.value = safeSet(data.rekomendasiNdSvpIa);
+                        autoResizeTextarea(rekomendasiNdSvpIaInput);
+                    }
                     if (nomorNdDirutInput) nomorNdDirutInput.value = safeSet(data.nomorNdDirut);
-                    if (deskripsiNdDirutInput) deskripsiNdDirutInput.value = safeSet(data.deskripsiNdDirut);
+                    if (deskripsiNdDirutInput) {
+                        deskripsiNdDirutInput.value = safeSet(data.deskripsiNdDirut);
+                        autoResizeTextarea(deskripsiNdDirutInput);
+                    }
                     if (tanggalNdDirutInput) tanggalNdDirutInput.value = formatDateForInput(safeSet(data.tanggalNdDirut));
-                    if (temuanNdDirutInput) temuanNdDirutInput.value = safeSet(data.temuanNdDirut);
-                    if (rekomendasiNdDirutInput) rekomendasiNdDirutInput.value = safeSet(data.rekomendasiNdDirut);
+                    if (temuanNdDirutInput) {
+                        temuanNdDirutInput.value = safeSet(data.temuanNdDirut);
+                        autoResizeTextarea(temuanNdDirutInput);
+                    }
+                    if (rekomendasiNdDirutInput) {
+                        rekomendasiNdDirutInput.value = safeSet(data.rekomendasiNdDirut);
+                        autoResizeTextarea(rekomendasiNdDirutInput);
+                    }
                     if (duedateNdDirutInput) duedateNdDirutInput.value = formatDateForInput(safeSet(data.duedateNdDirut));
                     if (picNdDirutInput) picNdDirutInput.value = safeSet(data.picNdDirut);
                     if (uicNdDirutInput) uicNdDirutInput.value = safeSet(data.uicNdDirut);
@@ -264,4 +282,36 @@ document.addEventListener('DOMContentLoaded', () => {
     // On load, show only the Extract Data button (form and error hidden)
     dataDisplayDiv.style.display = 'none';
     statusError.style.display = 'none';
+
+    // Function to auto-resize textarea
+    function autoResizeTextarea(element) {
+        if (element && typeof element.style !== 'undefined') {
+            element.style.height = 'auto'; // Temporarily shrink to get the correct scrollHeight
+            element.style.height = (element.scrollHeight) + 'px';
+        }
+    }
+
+    // Get all textareas that need auto-resizing
+    const textareasToResize = document.querySelectorAll('.auto-resize-textarea');
+
+    // Add event listeners for input and call initial resize
+    textareasToResize.forEach(textarea => {
+        textarea.addEventListener('input', () => autoResizeTextarea(textarea));
+        // Initial resize will be handled when data is populated by getDataBtn
+        // or if there's any pre-filled content (though not typical for this popup)
+        autoResizeTextarea(textarea); // Call once in case of pre-filled or cached values
+    });
+
+    // Modify the getDataBtn event listener to resize textareas after populating them
+    // (This requires finding the part of the code where values are set)
+    // The existing getDataBtn listener already handles populating. We need to ensure resize happens after.
+    // The `safeSet` function is used. We'll add resizing after values are set.
+
+    // Re-hooking the getDataBtn to ensure changes are applied correctly
+    // This is a bit tricky as the original listener is already set up.
+    // For simplicity in this environment, I'll focus on adding the calls
+    // within the existing structure if possible, or clearly denote where they should go.
+
+    // The calls to autoResizeTextarea will be added inside the chrome.tabs.sendMessage callback
+    // after the `safeSet` calls for each relevant textarea.
 });
