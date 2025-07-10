@@ -119,33 +119,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (matriksProgramInput) matriksProgramInput.value = safeSet(data.matriksProgram);
                     if (tanggalMatriksInput) tanggalMatriksInput.value = formatDateForInput(safeSet(data.tanggalMatriks));
                     if (nomorNdSvpIaInput) nomorNdSvpIaInput.value = safeSet(data.nomorNdSvpIa);
-                    if (deskripsiNdSvpIaInput) {
-                        deskripsiNdSvpIaInput.value = safeSet(data.deskripsiNdSvpIa);
-                        autoResizeTextarea(deskripsiNdSvpIaInput);
-                    }
+                    const setTextAreaValue = (element, rawValue) => {
+                        if (element) {
+                            let processedValue = safeSet(rawValue);
+                            if (Array.isArray(processedValue)) {
+                                element.value = processedValue.join('\n');
+                            } else {
+                                element.value = processedValue;
+                            }
+                            autoResizeTextarea(element);
+                        }
+                    };
+
+                    setTextAreaValue(deskripsiNdSvpIaInput, data.deskripsiNdSvpIa);
                     if (tanggalNdSvpIaInput) tanggalNdSvpIaInput.value = formatDateForInput(safeSet(data.tanggalNdSvpIa));
-                    if (temuanNdSvpIaInput) {
-                        temuanNdSvpIaInput.value = safeSet(data.temuanNdSvpIa);
-                        autoResizeTextarea(temuanNdSvpIaInput);
-                    }
-                    if (rekomendasiNdSvpIaInput) {
-                        rekomendasiNdSvpIaInput.value = safeSet(data.rekomendasiNdSvpIa);
-                        autoResizeTextarea(rekomendasiNdSvpIaInput);
-                    }
+                    setTextAreaValue(temuanNdSvpIaInput, data.temuanNdSvpIa);
+                    setTextAreaValue(rekomendasiNdSvpIaInput, data.rekomendasiNdSvpIa);
+
                     if (nomorNdDirutInput) nomorNdDirutInput.value = safeSet(data.nomorNdDirut);
-                    if (deskripsiNdDirutInput) {
-                        deskripsiNdDirutInput.value = safeSet(data.deskripsiNdDirut);
-                        autoResizeTextarea(deskripsiNdDirutInput);
-                    }
+                    setTextAreaValue(deskripsiNdDirutInput, data.deskripsiNdDirut);
                     if (tanggalNdDirutInput) tanggalNdDirutInput.value = formatDateForInput(safeSet(data.tanggalNdDirut));
-                    if (temuanNdDirutInput) {
-                        temuanNdDirutInput.value = safeSet(data.temuanNdDirut);
-                        autoResizeTextarea(temuanNdDirutInput);
-                    }
-                    if (rekomendasiNdDirutInput) {
-                        rekomendasiNdDirutInput.value = safeSet(data.rekomendasiNdDirut);
-                        autoResizeTextarea(rekomendasiNdDirutInput);
-                    }
+                    setTextAreaValue(temuanNdDirutInput, data.temuanNdDirut);
+                    setTextAreaValue(rekomendasiNdDirutInput, data.rekomendasiNdDirut);
+
                     if (duedateNdDirutInput) duedateNdDirutInput.value = formatDateForInput(safeSet(data.duedateNdDirut));
                     if (picNdDirutInput) picNdDirutInput.value = safeSet(data.picNdDirut);
                     if (uicNdDirutInput) uicNdDirutInput.value = safeSet(data.uicNdDirut);
