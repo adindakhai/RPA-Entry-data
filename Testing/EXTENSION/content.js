@@ -84,6 +84,56 @@ function ringkasTeks(text) {
     return ringkasan.length === 250 ? ringkasan + '...' : ringkasan;
 }
 
+function parseListFromString(textBlock) {
+    if (!textBlock || typeof textBlock !== 'string') {
+        return ["Data belum ditemukan"];
+    }
+
+    const lines = textBlock.split('\n');
+    const listItems = [];
+    let currentItem = '';
+    const listItemRegex = /^\s*(?:[-*•–]|\d+[.)]|[a-zA-Z][.)])\s*(.*)/;
+
+    for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) {
+            if (currentItem) {
+                // listItems.push(currentItem.trim()); // Decide if empty lines break items or are part of them
+                // currentItem = ''; // if empty line means new item.
+            }
+            continue;
+        }
+
+        const match = trimmedLine.match(listItemRegex);
+        if (match) {
+            if (currentItem) {
+                listItems.push(currentItem.trim());
+            }
+            currentItem = match[1] ? match[1].trim() : '';
+        } else {
+            if (currentItem) {
+                currentItem += (currentItem.endsWith('\n') ? '' : '\n') + trimmedLine;
+            } else {
+                // Line is not part of a detected list, and no list has started.
+                // If we want to capture all non-empty lines when no list markers are found,
+                // this behavior is handled by the fallback after the loop.
+            }
+        }
+    }
+
+    if (currentItem) {
+        listItems.push(currentItem.trim());
+    }
+
+    if (listItems.length === 0 && textBlock.trim()) {
+        // No list markers found, but text exists. Return non-empty lines as items.
+        return textBlock.split('\n').map(l => l.trim()).filter(l => l && l !== "Data belum ditemukan" && l.length > 0);
+    }
+
+    return listItems.length > 0 ? listItems : ["Data belum ditemukan"];
+}
+
+
 // ===================================================================================
 // BAGIAN 3: LISTENER EKSTRAKSI DATA UNIVERSAL
 // ===================================================================================
@@ -96,39 +146,31 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     let extractedData = {
       noSPK: "Data belum ditemukan",
-      noSPK: "Data belum ditemukan", // Existing
-      kelompok: "", // Existing - typically from popup/DB, but content.js could try
-      code: "Data belum ditemukan", // To be enhanced
-      masaPenyelesaianPekerjaan: "Data belum ditemukan", // Existing
-      matriksProgram: "Data belum ditemukan", // To be enhanced
-      tanggalMatriks: "Databelum ditemukan", // To be enhanced
-
-      nomorNdSvpIa: "Data belum ditemukan", // Existing
-      deskripsiNdSvpIa: "Data belum ditemukan", // Existing
-      tanggalNdSvpIa: "Data belum ditemukan", // Existing
-      temuanNdSvpIa: "Data belum ditemukan", // Existing
-      rekomendasiNdSvpIa: "Data belum ditemukan", // Existing
-
-      nomorNdDirut: "Data belum ditemukan", // To be enhanced
-      deskripsiNdDirut: "Data belum ditemukan", // To be enhanced
-      tanggalNdDirut: "Data belum ditemukan", // To be enhanced
-      temuanNdDirut: "Data belum ditemukan", // To be enhanced
-      rekomendasiNdDirut: "Data belum ditemukan", // To be enhanced
-      duedateNdDirut: "Data belum ditemukan", // To be enhanced (will likely be single string)
-
-      picNdDirut: "Data belum ditemukan", // To be enhanced
-      uicNdDirut: "Data belum ditemukan", // To be enhanced
-
-      // Status fields - typically not from NDE content, but defaults are set
-      mtlClosed: 0, // Existing
-      reschedule: 0, // Existing
-      overdue: 0, // Existing
-      onSchedule: 0, // Existing - popup.js defaults to 1 if undefined
-      status: "Data belum ditemukan", // Existing
-
-      // Supplemental, but good to have in init
-      pengirim: "Data belum ditemukan", // Added for consistency
-      idLampiran: "Data belum ditemukan" // Added for consistency
+      kelompok: "Data belum ditemukan",
+      code: "Data belum ditemukan",
+      masaPenyelesaianPekerjaan: "Data belum ditemukan",
+      matriksProgram: "Data belum ditemukan",
+      tanggalMatriks: "Data belum ditemukan",
+      nomorNdSvpIa: "Data belum ditemukan",
+      deskripsiNdSvpIa: "Data belum ditemukan",
+      tanggalNdSvpIa: "Data belum ditemukan",
+      temuanNdSvpIa: ["Data belum ditemukan"], // Initialize as array
+      rekomendasiNdSvpIa: ["Data belum ditemukan"], // Initialize as array
+      nomorNdDirut: "Data belum ditemukan",
+      deskripsiNdDirut: "Data belum ditemukan",
+      tanggalNdDirut: "Data belum ditemukan",
+      temuanNdDirut: ["Data belum ditemukan"], // Initialize as array
+      rekomendasiNdDirut: ["Data belum ditemukan"], // Initialize as array
+      duedateNdDirut: "Data belum ditemukan",
+      picNdDirut: "Data belum ditemukan",
+      uicNdDirut: "Data belum ditemukan",
+      mtlClosed: 0,
+      reschedule: 0,
+      overdue: 0,
+      onSchedule: 0,
+      status: "Data belum ditemukan",
+      pengirim: "Data belum ditemukan",
+      idLampiran: "Data belum ditemukan"
     };
 
     const cleanText = (text) => text ? text.replace(/\s+/g, ' ').trim() : "Data belum ditemukan";
@@ -176,68 +218,116 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
       } catch (e) { console.warn("Error ekstraksi Tanggal ND SVP IA:", e); }
 
-      const fullTextContent = (shadowContent.querySelector('.isisurat')?.innerText || "").toLowerCase();
+      const fullTextContent = (shadowContent.querySelector('.isisurat')?.innerText || "");
+      const fullTextContentLowerCase = fullTextContent.toLowerCase();
 
       try {
-        const spkRegex = /spk\s*(?:no\.?|nomor)?\s*[:\-\s]*([\w\/\.\-\s]+)/i;
-        const spkMatch = fullTextContent.match(spkRegex);
+        const spkRegexDetailed = /(?:Surat Perintah Kerja|SPK)(?:\s*\(SPK\))?\s*(?:Nomor|No\.?)\s*[:\s-]*([\w\/.-]+(?:\/[\w.-]+)*)/i;
+        const spkMatch = fullTextContent.match(spkRegexDetailed);
         if (spkMatch && spkMatch[1]) {
-            const potentialSPK = spkMatch[1].split(/[\n\r]| {2,}/)[0];
-            data.noSPK = cleanText(potentialSPK.toUpperCase()); // SPK biasanya uppercase
+            data.noSPK = cleanText(spkMatch[1].toUpperCase());
+        } else {
+            const spkRegexOld = /spk\s*(?:no\.?|nomor)?\s*[:\-\s]*([\w\/\.\-\s]+)/i;
+            const spkMatchOld = fullTextContentLowerCase.match(spkRegexOld);
+            if (spkMatchOld && spkMatchOld[1]) {
+                const originalTextMatch = fullTextContent.substring(spkMatchOld.index, spkMatchOld.index + spkMatchOld[0].length);
+                const valueMatchOriginalCase = originalTextMatch.match(spkRegexOld);
+                if (valueMatchOriginalCase && valueMatchOriginalCase[1]) {
+                    const potentialSPK = valueMatchOriginalCase[1].split(/[\n\r]| {2,}/)[0];
+                    data.noSPK = cleanText(potentialSPK.toUpperCase());
+                }
+            }
         }
       } catch (e) { console.warn("Error ekstraksi No SPK:", e); }
       
       try {
         const masaRegex = /masa\s+penyelesaian\s+pekerjaan\s*[:\-\s]*([\w\s\d\.\-\/]+)(?:\n|$)/i;
-        const masaMatch = fullTextContent.match(masaRegex);
-        if (masaMatch && masaMatch[1]) {
-          data.masaPenyelesaianPekerjaan = cleanText(masaMatch[1]);
+        const masaMatchKeywords = fullTextContentLowerCase.match(masaRegex);
+        if (masaMatchKeywords && masaMatchKeywords[1]) {
+            const actualTextPortion = fullTextContent.substring(masaMatchKeywords.index, masaMatchKeywords.index + masaMatchKeywords[0].length);
+            const valueMatchOriginalCase = actualTextPortion.match(masaRegex);
+            if (valueMatchOriginalCase && valueMatchOriginalCase[1]) {
+                data.masaPenyelesaianPekerjaan = cleanText(valueMatchOriginalCase[1]);
+            } else {
+                data.masaPenyelesaianPekerjaan = cleanText(masaMatchKeywords[1]);
+            }
         }
       } catch (e) { console.warn("Error ekstraksi Masa Penyelesaian Pekerjaan:", e); }
 
+      // Temuan ND SVP IA (OFI) and Rekomendasi ND SVP IA
       try {
+        let ofiTextContent = null;
+        let rekomendasiTextContent = null;
+        let rekomendasiLinkedToOFI = false;
+
         const ofiKeywords = ["opportunity for improvement", "ofi", "temuan"];
-        let ofiText = "";
-        let ofiRegex = new RegExp(`(?:${ofiKeywords.join('|')})\s*[:\n\s.-]*([\s\S]*?)(?=(?:rekomendasi[:\s\n]|\n\n[\w\s]{20,}|\Z))`, "i");
-        let ofiMatch = fullTextContent.match(ofiRegex);
+        const ofiRegex = new RegExp(`(?:${ofiKeywords.join('|')})\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:(?:\\n|^)\\s*(?:rekomendasi|kami menyampaikan rekomendasi))|\\n\\n[\\w\\s]{15,}|\Z)`, "i");
+        const ofiMatch = fullTextContent.match(ofiRegex);
 
-        if (ofiMatch && ofiMatch[1] && ofiMatch[1].trim().length > 10) {
-            ofiText = ofiMatch[1];
-        }
-        if (ofiText) {
-            data.temuanNdSvpIa = cleanText(ofiText.substring(0, 500));
-        }
-      } catch (e) { console.warn("Error ekstraksi Temuan ND SVP IA (OFI):", e); }
+        if (ofiMatch && ofiMatch[1] && ofiMatch[1].trim().length > 3) {
+            ofiTextContent = ofiMatch[1].substring(0, 2000);
+            data.temuanNdSvpIa = parseListFromString(ofiTextContent);
 
-      try {
-        const rekomendasiRegex = /rekomendasi\s*[:\n\s.-]+([\s\S]*?)(?=(?:tindak\s+lanjut|penutup|hormat kami|demikian|\n\n[\w\s]{20,}|\Z))/i;
-        const rekomendasiMatch = fullTextContent.match(rekomendasiRegex);
-        if (rekomendasiMatch && rekomendasiMatch[1]) {
-          data.rekomendasiNdSvpIa = cleanText(rekomendasiMatch[1].substring(0, 500));
-        }
-      } catch (e) { console.warn("Error ekstraksi Rekomendasi ND SVP IA:", e); }
+            const textImmediatelyAfterOFI = fullTextContent.substring(ofiMatch.index + ofiMatch[1].length);
+            const rekomendasiKeywords = ["rekomendasi", "kami menyampaikan rekomendasi"];
+            const rekRegexLinked = new RegExp(`(?:^|\\n)\\s*(?:${rekomendasiKeywords.join('|')})\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:tindak\\s+lanjut|penutup|hormat kami|demikian|\\n\\n[\\w\\s]{15,}|\Z))`, "i");
+            const rekMatchLinked = textImmediatelyAfterOFI.match(rekRegexLinked);
 
-      // Revised extraction logic based on new user guidance:
+            if (rekMatchLinked && rekMatchLinked[1] && rekMatchLinked[1].trim()) {
+                rekomendasiTextContent = rekMatchLinked[1].substring(0, 2000);
+                data.rekomendasiNdSvpIa = parseListFromString(rekomendasiTextContent);
+                rekomendasiLinkedToOFI = true;
+            } else {
+                 console.log("[content.js] Linked Rekomendasi not found immediately after OFI block.");
+            }
+        } else {
+            console.log("[content.js] OFI section not clearly identified by primary regex.");
+        }
+
+        let isTemuanStillDefault = (Array.isArray(data.temuanNdSvpIa) && data.temuanNdSvpIa.length === 1 && data.temuanNdSvpIa[0] === "Data belum ditemukan");
+        if (isTemuanStillDefault && !ofiTextContent) {
+            const temuanFallbackKeywords = ["temuan", "temuan audit", "hasil pemeriksaan"];
+            const temuanFallbackRegex = new RegExp(`(?:${temuanFallbackKeywords.join('|')})\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:(?:\\n|^)\\s*(?:rekomendasi|kami menyampaikan rekomendasi))|\\n\\n[\\w\\s]{15,}|\Z)`, "i");
+            const temuanFallbackMatch = fullTextContent.match(temuanFallbackRegex);
+            if (temuanFallbackMatch && temuanFallbackMatch[1] && temuanFallbackMatch[1].trim()) {
+                ofiTextContent = temuanFallbackMatch[1].substring(0, 2000);
+                data.temuanNdSvpIa = parseListFromString(ofiTextContent);
+                console.log("[content.js] Found Temuan ND SVP IA using fallback search.");
+            }
+        }
+
+        let isRekomendasiStillDefault = (Array.isArray(data.rekomendasiNdSvpIa) && data.rekomendasiNdSvpIa.length === 1 && data.rekomendasiNdSvpIa[0] === "Data belum ditemukan");
+        if (isRekomendasiStillDefault && !rekomendasiLinkedToOFI) {
+            const standaloneRekKeywords = ["rekomendasi", "kami menyampaikan rekomendasi", "saran perbaikan"];
+            const standaloneRekRegex = new RegExp(`(?:${standaloneRekKeywords.join('|')})\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:tindak\\s+lanjut|penutup|hormat kami|demikian|\\n\\n[\\w\\s]{15,}|\Z))`, "i");
+            const standaloneRekMatch = fullTextContent.match(standaloneRekRegex);
+            if (standaloneRekMatch && standaloneRekMatch[1] && standaloneRekMatch[1].trim()) {
+                rekomendasiTextContent = standaloneRekMatch[1].substring(0, 2000);
+                data.rekomendasiNdSvpIa = parseListFromString(rekomendasiTextContent);
+                console.log("[content.js] Found Rekomendasi ND SVP IA using standalone fallback search.");
+            }
+        }
+      } catch (e) { console.warn("Error ekstraksi Temuan/Rekomendasi ND SVP IA:", e); }
 
       // Nomor ND SVP IA (refined - already uses getTextFromTable, but if not found, try keywords)
       if (data.nomorNdSvpIa === "Data belum ditemukan") {
-        const nomorKeywords = ["nomor nd", "nota dinas", "no.", "nomor"]; // Added "nomor" back but will be careful with context
+        const nomorKeywords = ["nomor nd", "nota dinas", "no.", "nomor"];
         for (const keyword of nomorKeywords) {
-            // Regex refined to better match formats like C.Tel.XXX/UM 500/HCS-A1010000/2025
-            // Allows alphanumeric, '.', '/', '-', and spaces within the number string.
-            // Ensures it doesn't just capture a simple number if "nomor" is used more broadly.
-            const valuePattern = "([A-Z0-9\\/\\.\\-\\s]*[A-Z0-9\\/][A-Z0-9\\/\\.\\-\\s]*)"; // Must contain at least one letter or slash and not be purely numeric for generic "nomor"
+            const valuePattern = "([A-Z0-9\\/\\.\\-\\s]*[A-Z0-9\\/][A-Z0-9\\/\\.\\-\\s]*)";
             let regex;
-            if (keyword === "nomor") { // More restrictive for generic "nomor" to avoid capturing any number
+            if (keyword === "nomor") {
                  regex = new RegExp(`${keyword}\\s*[:\\s]*${valuePattern}(?=\\s|\\n|$)`, "i");
             } else {
                  regex = new RegExp(`${keyword}\\s*[:\\s]*([A-Z0-9\\/\\.\\-\\s]+[A-Z0-9])`, "i");
             }
-
-            const match = fullTextContent.substring(0, Math.min(fullTextContent.length, 600)).match(regex); // Search in header part (increased length slightly)
-            if (match && match[1] && match[1].length > 5) { // Basic sanity check for length
-                data.nomorNdSvpIa = cleanText(match[1].replace(/\s+/g, ' ').trim()); // Normalize spaces within the number
-                break;
+            const matchKeywords = fullTextContentLowerCase.substring(0, Math.min(fullTextContentLowerCase.length, 600)).match(regex);
+            if (matchKeywords && matchKeywords[1] && matchKeywords[1].length > 5 ) {
+                const originalTextPortion = fullTextContent.substring(matchKeywords.index, matchKeywords.index + matchKeywords[0].length);
+                const valueMatchOriginalCase = originalTextPortion.match(regex);
+                if (valueMatchOriginalCase && valueMatchOriginalCase[1]) {
+                    data.nomorNdSvpIa = cleanText(valueMatchOriginalCase[1].replace(/\s+/g, ' ').trim());
+                    break;
+                }
             }
         }
       }
@@ -246,71 +336,31 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const perihalKeywords = ["perihal", "subject", "hal"];
         for (const keyword of perihalKeywords) {
             const regex = new RegExp(`(?:^|\\n)${keyword}\\s*[:\\s]*([^\\n]+)`, "i");
-            const match = fullTextContent.substring(0, Math.min(fullTextContent.length, 700)).match(regex); // Search in header part
-            if (match && match[1]) {
-                data.deskripsiNdSvpIa = cleanText(match[1]);
-                break;
+            const matchKeywords = fullTextContentLowerCase.substring(0, Math.min(fullTextContentLowerCase.length, 700)).match(regex);
+            if (matchKeywords && matchKeywords[1]) {
+                const originalTextPortion = fullTextContent.substring(matchKeywords.index, matchKeywords.index + matchKeywords[0].length);
+                const valueMatchOriginalCase = originalTextPortion.match(regex);
+                if (valueMatchOriginalCase && valueMatchOriginalCase[1]) {
+                    data.deskripsiNdSvpIa = cleanText(valueMatchOriginalCase[1]);
+                    break;
+                }
             }
         }
       }
-      // Tanggal ND SVP IA (already good, uses dateRegex on isisuratElement, last match before "Nama Pejabat")
-      // No SPK (already good, uses spkRegex)
-      // Masa Penyelesaian Pekerjaan (already good, uses masaRegex)
-      // Temuan ND SVP IA (already good, uses ofiKeywords and ofiRegex)
-      // Temuan ND SVP IA (OFI) and linked Rekomendasi ND SVP IA
-      try {
-        const ofiKeywords = ["opportunity for improvement", "ofi", "temuan"];
-        // Refined ofiRegex to also look for "kami menyampaikan rekomendasi" as a potential end delimiter for OFI.
-        const ofiRegex = new RegExp(`(?:${ofiKeywords.join('|')})\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:rekomendasi[:\\s\\n]|kami menyampaikan rekomendasi|\\n\\n[\\w\\s]{20,}|\Z))`, "i");
-        const ofiMatch = fullTextContent.match(ofiRegex);
-
-        if (ofiMatch && ofiMatch[1] && ofiMatch[1].trim().length > 5) { // Min length for OFI text
-            data.temuanNdSvpIa = cleanText(ofiMatch[1].substring(0, 500));
-
-            // Search for Rekomendasi *after* this OFI match
-            // Ensure ofiMatch.index and ofiMatch[0].length are valid before substring
-            const startIndexForRekomendasi = (ofiMatch.index !== undefined && ofiMatch[0] !== undefined) ? ofiMatch.index + ofiMatch[0].length : -1;
-
-            if (startIndexForRekomendasi !== -1 && startIndexForRekomendasi < fullTextContent.length) {
-                const textAfterOFI = fullTextContent.substring(startIndexForRekomendasi);
-                const rekomendasiKeywords = ["rekomendasi", "kami menyampaikan rekomendasi"];
-                // Regex for Rekomendasi: starts with keyword (possibly at beginning of line), then captures content
-                const rekRegex = new RegExp(`(?:^|\\n)\\s*(?:${rekomendasiKeywords.join('|')})\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:tindak\\s+lanjut|penutup|hormat kami|demikian|\\n\\n[\\w\\s]{20,}|\Z))`, "i");
-                const rekomendasiMatchInFollowingText = textAfterOFI.match(rekRegex);
-
-                if (rekomendasiMatchInFollowingText && rekomendasiMatchInFollowingText[1] && rekomendasiMatchInFollowingText[1].trim()) {
-                    data.rekomendasiNdSvpIa = cleanText(rekomendasiMatchInFollowingText[1].substring(0, 500));
-                } else {
-                    console.log("[content.js] Rekomendasi ND SVP IA not found immediately after OFI section using specific keywords.");
-                }
-            } else {
-                 console.log("[content.js] Invalid start index for Rekomendasi search after OFI.");
-            }
-        } else {
-            console.log("[content.js] OFI section not clearly identified, skipping linked Rekomendasi ND SVP IA search.");
-            // Fallback: If OFI wasn't found with the above, try a more general Rekomendasi search if temuan is still empty
-            // This retains some of the older broader search if the strict OFI->Rek linkage fails.
-            if (data.temuanNdSvpIa === "Data belum ditemukan" && data.rekomendasiNdSvpIa === "Data belum ditemukan") {
-                const standaloneRekSvpIaKeywords = ["rekomendasi", "kami menyampaikan rekomendasi"];
-                const standaloneRekSvpIaRegex = new RegExp(`(?:${standaloneRekSvpIaKeywords.join('\\s*[:\\n\\s.-]*|')}\\s*)([\\s\\S]*?)(?=(?:tindak\\s+lanjut|penutup|hormat kami|demikian|\\n\\n[\\w\\s]{20,}|\Z))`, "i");
-                const standaloneRekMatch = fullTextContent.match(standaloneRekSvpIaRegex);
-                if (standaloneRekMatch && standaloneRekMatch[1] && standaloneRekMatch[1].trim()) {
-                  data.rekomendasiNdSvpIa = cleanText(standaloneRekMatch[1].substring(0, 500));
-                  console.log("[content.js] Found Rekomendasi ND SVP IA using standalone search.");
-                }
-            }
-        }
-      } catch (e) { console.warn("Error ekstraksi Temuan ND SVP IA (OFI) or linked Rekomendasi:", e); }
 
       // CODE
       try {
         const codeKeywords = ["kode", "code", "audit code", "kode temuan", "project code"];
         for (const keyword of codeKeywords) {
             const regex = new RegExp(`${keyword}\\s*[:\\s-]*([\\w\\/\\.\\-]+)`, "i");
-            const match = fullTextContent.match(regex);
-            if (match && match[1]) {
-                data.code = cleanText(match[1].toUpperCase());
-                break;
+            const matchKeywords = fullTextContentLowerCase.match(regex);
+            if (matchKeywords && matchKeywords[1]) {
+                const originalTextPortion = fullTextContent.substring(matchKeywords.index, matchKeywords.index + matchKeywords[0].length);
+                const valueMatchOriginalCase = originalTextPortion.match(regex);
+                 if (valueMatchOriginalCase && valueMatchOriginalCase[1]) {
+                    data.code = cleanText(valueMatchOriginalCase[1].toUpperCase());
+                    break;
+                }
             }
         }
       } catch (e) { console.warn("Error ekstraksi CODE:", e); }
@@ -320,24 +370,31 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const matriksKeywords = ["matriks program", "program kerja audit tahunan", "pkat", "pknat", "audit tahunan", "matriks"];
         for (const keyword of matriksKeywords) {
             const regex = new RegExp(`${keyword}\\s*[:\\s-]*([^\\n]+)(?:.*tanggal\\s*[:\\s-]*(\\d{1,2}\\s+\\w+\\s+\\d{4}))?`, "i");
-            const match = fullTextContent.match(regex);
-            if (match && match[1]) {
-                data.matriksProgram = cleanText(match[1]);
-                if (match[2]) { // If tanggal is captured in the same line/context
-                    data.tanggalMatriks = cleanText(match[2]);
+            const matchKeywords = fullTextContentLowerCase.match(regex);
+            if (matchKeywords && matchKeywords[1]) {
+                const originalTextPortion = fullTextContent.substring(matchKeywords.index, matchKeywords.index + matchKeywords[0].length);
+                const valueMatchOriginalCase = originalTextPortion.match(regex);
+                if (valueMatchOriginalCase && valueMatchOriginalCase[1]) {
+                    data.matriksProgram = cleanText(valueMatchOriginalCase[1]);
+                    if (valueMatchOriginalCase[2]) {
+                        data.tanggalMatriks = cleanText(valueMatchOriginalCase[2]);
+                    }
+                    break;
                 }
-                break;
             }
         }
-        // If Tanggal Matriks not found with Matriks Program, try standalone
         if (data.tanggalMatriks === "Data belum ditemukan") {
             const tglMatriksKeywords = ["tanggal matriks", "tanggal pkat", "tanggal pknat"];
              for (const keyword of tglMatriksKeywords) {
                 const regex = new RegExp(`${keyword}\\s*[:\\s-]*(\\d{1,2}\\s+\\w+\\s+\\d{4})`, "i");
-                const match = fullTextContent.match(regex);
-                if (match && match[1]) {
-                    data.tanggalMatriks = cleanText(match[1]);
-                    break;
+                const matchKeywords = fullTextContentLowerCase.match(regex);
+                if (matchKeywords && matchKeywords[1]) {
+                    const originalTextPortion = fullTextContent.substring(matchKeywords.index, matchKeywords.index + matchKeywords[0].length);
+                    const valueMatchOriginalCase = originalTextPortion.match(regex);
+                    if (valueMatchOriginalCase && valueMatchOriginalCase[1]) {
+                        data.tanggalMatriks = cleanText(valueMatchOriginalCase[1]);
+                        break;
+                    }
                 }
             }
         }
@@ -348,182 +405,195 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const kelompokKeywords = ["kelompok temuan", "jenis temuan", "kategori temuan", "kelompok:"];
         for (const keyword of kelompokKeywords) {
             const regex = new RegExp(`${keyword}\\s*[:\\s-]*([^\\n]+)`, "i");
-            const match = fullTextContent.match(regex);
-            if (match && match[1]) {
-                data.kelompok = cleanText(match[1]);
-                break;
+            const matchKeywords = fullTextContentLowerCase.match(regex);
+            if (matchKeywords && matchKeywords[1]) {
+                 const originalTextPortion = fullTextContent.substring(matchKeywords.index, matchKeywords.index + matchKeywords[0].length);
+                 const valueMatchOriginalCase = originalTextPortion.match(regex);
+                 if (valueMatchOriginalCase && valueMatchOriginalCase[1]) {
+                    data.kelompok = cleanText(valueMatchOriginalCase[1]);
+                    break;
+                }
             }
         }
       } catch (e) { console.warn("Error ekstraksi Kelompok:", e); }
 
       // --- ND DIRUT Fields ---
       const ndDirutContextRegex = /nota dinas direktur utama|nd dirut|kepada direktur utama/i;
-      const dirutSectionMatch = fullTextContent.match(ndDirutContextRegex);
-      let dirutText = fullTextContent; // Default to full text if no specific section found
+      const dirutSectionMatch = fullTextContentLowerCase.match(ndDirutContextRegex);
+      let dirutText = fullTextContent;
+      let dirutTextLowerCase = fullTextContentLowerCase;
 
       if (dirutSectionMatch) {
-          // Try to narrow down the search text if a clear "ND Dirut" section header is found
-          // This is a simple approach; more complex documents might need smarter segmentation
-          const searchStartIndex = dirutSectionMatch.index;
-          dirutText = fullTextContent.substring(searchStartIndex);
+          dirutText = fullTextContent.substring(dirutSectionMatch.index);
+          dirutTextLowerCase = fullTextContentLowerCase.substring(dirutSectionMatch.index);
       }
 
-      try {
+      try { // Nomor ND Dirut
         const nomorNdDirutKeywords = ["nomor nd dirut", "nd dirut nomor"];
         for (const keyword of nomorNdDirutKeywords) {
             const regex = new RegExp(`${keyword}\\s*[:\\s-]*([\\w\\/\\.\\-]+)`, "i");
-            const match = dirutText.match(regex);
-            if (match && match[1]) {
-                data.nomorNdDirut = cleanText(match[1]);
-                break;
+            const matchKeywords = dirutTextLowerCase.match(regex);
+            if (matchKeywords && matchKeywords[1]) {
+                const originalTextPortion = dirutText.substring(matchKeywords.index, matchKeywords.index + matchKeywords[0].length);
+                const valueMatchOriginalCase = originalTextPortion.match(regex);
+                if (valueMatchOriginalCase && valueMatchOriginalCase[1]) {
+                    data.nomorNdDirut = cleanText(valueMatchOriginalCase[1]);
+                    break;
+                }
             }
         }
       } catch (e) { console.warn("Error ekstraksi Nomor ND Dirut:", e); }
 
-      try {
+      try { // Deskripsi ND Dirut
         const deskripsiNdDirutKeywords = ["perihal nd dirut", "hal nd dirut"];
          for (const keyword of deskripsiNdDirutKeywords) {
             const regex = new RegExp(`${keyword}\\s*[:\\s-]*([^\\n]+)`, "i");
-            const match = dirutText.match(regex);
-            if (match && match[1]) {
-                data.deskripsiNdDirut = cleanText(match[1]);
-                break;
+            const matchKeywords = dirutTextLowerCase.match(regex);
+            if (matchKeywords && matchKeywords[1]) {
+                 const originalTextPortion = dirutText.substring(matchKeywords.index, matchKeywords.index + matchKeywords[0].length);
+                 const valueMatchOriginalCase = originalTextPortion.match(regex);
+                 if (valueMatchOriginalCase && valueMatchOriginalCase[1]) {
+                    data.deskripsiNdDirut = cleanText(valueMatchOriginalCase[1]);
+                    break;
+                }
             }
         }
       } catch (e) { console.warn("Error ekstraksi Deskripsi ND Dirut:", e); }
 
-      try {
+      try { // Tanggal ND Dirut
         const tanggalNdDirutKeywords = ["tanggal nd dirut"];
          for (const keyword of tanggalNdDirutKeywords) {
             const regex = new RegExp(`${keyword}\\s*[:\\s-]*(\\d{1,2}\\s+\\w+\\s+\\d{4})`, "i");
-            const match = dirutText.match(regex);
-            if (match && match[1]) {
-                data.tanggalNdDirut = cleanText(match[1]);
-                break;
+            const matchKeywords = dirutTextLowerCase.match(regex);
+            if (matchKeywords && matchKeywords[1]) {
+                 const originalTextPortion = dirutText.substring(matchKeywords.index, matchKeywords.index + matchKeywords[0].length);
+                 const valueMatchOriginalCase = originalTextPortion.match(regex);
+                if (valueMatchOriginalCase && valueMatchOriginalCase[1]) {
+                    data.tanggalNdDirut = cleanText(valueMatchOriginalCase[1]);
+                    break;
+                }
             }
         }
       } catch (e) { console.warn("Error ekstraksi Tanggal ND Dirut:", e); }
 
-      try {
+      try { // Temuan ND Dirut
         const temuanNdDirutKeywords = ["temuan nd dirut", "ofi dirut"];
         for (const keyword of temuanNdDirutKeywords) {
-            const regex = new RegExp(`${keyword}\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:rekomendasi nd dirut|rekomendasi dirut|tindak lanjut dirut|\\n\\n[\\w\\s]{20,}|\\Z))`, "i");
-            const match = dirutText.match(regex);
+            const regex = new RegExp(`${keyword}\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:rekomendasi nd dirut|rekomendasi dirut|tindak lanjut dirut|\\n\\n[\\w\\s]{15,}|\\Z))`, "i");
+            const match = dirutText.match(regex); // Match on original case dirutText
             if (match && match[1] && match[1].trim()) {
-                data.temuanNdDirut = cleanText(match[1].substring(0, 500));
+                data.temuanNdDirut = parseListFromString(match[1].substring(0, 1000));
                 break;
             }
         }
       } catch (e) { console.warn("Error ekstraksi Temuan ND Dirut:", e); }
 
-      try {
+      try { // Rekomendasi ND Dirut
         const rekomendasiNdDirutKeywords = ["rekomendasi nd dirut", "rekomendasi dirut"];
          for (const keyword of rekomendasiNdDirutKeywords) {
-            const regex = new RegExp(`${keyword}\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:pic dirut|uic dirut|due date dirut|tindak lanjut|penutup|hormat kami|demikian|\\n\\n[\\w\\s]{20,}|\\Z))`, "i");
-            const match = dirutText.match(regex);
+            const regex = new RegExp(`${keyword}\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:pic dirut|uic dirut|due date dirut|tindak lanjut|penutup|hormat kami|demikian|\\n\\n[\\w\\s]{15,}|\Z))`, "i");
+            const match = dirutText.match(regex); // Match on original case dirutText
             if (match && match[1] && match[1].trim()) {
-                data.rekomendasiNdDirut = cleanText(match[1].substring(0, 500));
+                data.rekomendasiNdDirut = parseListFromString(match[1].substring(0, 1000));
                 break;
             }
         }
       } catch (e) { console.warn("Error ekstraksi Rekomendasi ND Dirut:", e); }
 
-      // Duedate ND Dirut
-      try {
+      try { // Duedate ND Dirut
         const duedateKeywords = ["paling lambat", "due\\s*date", "target penyelesaian", "tindak lanjut.*(?:tanggal|target)"];
-        // Search within "rencana tindak lanjut" context if possible, or general text for ND Dirut
         const duedateContextRegex = new RegExp(`(?:rencana tindak lanjut|action plan).*nd dirut([\\s\\S]*?)(?:\\n\\n|$)`, "i");
         let duedateSearchText = dirutText;
-        const duedateContextMatch = dirutText.match(duedateContextRegex);
+        let duedateSearchTextLowerCase = dirutTextLowerCase;
+        const duedateContextMatch = dirutTextLowerCase.match(duedateContextRegex);
         if (duedateContextMatch && duedateContextMatch[1]) {
-            duedateSearchText = duedateContextMatch[1];
+            duedateSearchText = dirutText.substring(dirutTextLowerCase.indexOf(duedateContextMatch[1]));
         }
 
         for (const keyword of duedateKeywords) {
-            // Regex tries to capture a date, or a phrase indicating a period
             const regex = new RegExp(`${keyword}\\s*[:\\s-]*((?:\\d{1,2}\\s+\\w+\\s+\\d{4})|[^\\n\\.,]+(?:minggu|bulan|hari|triwulan|semester|tahun))`, "i");
-            const match = duedateSearchText.match(regex);
-            if (match && match[1]) {
-                data.duedateNdDirut = cleanText(match[1]);
-                break;
+            const matchKeywords = duedateSearchText.toLowerCase().match(regex); // Match keyword on lowercase segment
+            if (matchKeywords && matchKeywords[1]) {
+                 const originalTextPortion = duedateSearchText.substring(matchKeywords.index, matchKeywords.index + matchKeywords[0].length);
+                 const valueMatchOriginalCase = originalTextPortion.match(regex);
+                if (valueMatchOriginalCase && valueMatchOriginalCase[1]) {
+                    data.duedateNdDirut = cleanText(valueMatchOriginalCase[1]);
+                    break;
+                }
             }
         }
       } catch (e) { console.warn("Error ekstraksi Duedate ND Dirut:", e); }
 
-      // PIC ND Dirut & UIC ND Dirut
-      try {
+      try { // PIC ND Dirut & UIC ND Dirut
         const picKeywords = ["pic", "penanggung jawab", "auditee", "manajemen terkait"];
         const uicKeywords = ["uic", "unit kerja", "divisi", "direktorat"];
-        // Try to find these in context of recommendations or action plans for Dirut
         const actionPlanContextRegex = /(?:rekomendasi nd dirut|tindak lanjut nd dirut)([\s\S]*?)(?:\n\n\w{5,}|\Z)/i;
         let actionPlanText = dirutText;
-        const actionPlanMatch = dirutText.match(actionPlanContextRegex);
+        const actionPlanMatch = dirutTextLowerCase.match(actionPlanContextRegex);
         if(actionPlanMatch && actionPlanMatch[1]) {
-            actionPlanText = actionPlanMatch[1];
+            actionPlanText = dirutText.substring(dirutTextLowerCase.indexOf(actionPlanMatch[1]));
         }
 
         for (const keyword of picKeywords) {
             const regex = new RegExp(`${keyword}\\s*[:\\s-]*([^\\n,]+)`, "i");
-            const match = actionPlanText.match(regex);
-            if (match && match[1]) {
-                data.picNdDirut = cleanText(match[1]);
-                break;
-            }
-        }
-        // Search for UIC in document beginning if not found near action plan
-        if(data.uicNdDirut === "Data belum ditemukan"){
-            for (const keyword of uicKeywords) {
-                const regex = new RegExp(`(?:${keyword}|kepada\\s*[:\\s-]*ykh\\.?\\s*([^\\n]+(?:${uicKeywords.join('|')})[^\\n]*))`, "i");
-                const match = fullTextContent.substring(0, Math.min(fullTextContent.length, 1000)).match(regex); // Search in header
-                if (match && match[1]) {
-                     data.uicNdDirut = cleanText(match[1].replace(/ykh\.?\s*/i, ''));
-                     break;
-                } else if (match && match[0].toLowerCase().includes(keyword)) { // If keyword itself matched
-                     const simpleRegex = new RegExp(`${keyword}\\s*[:\\s-]*([^\\n,]+)`, "i");
-                     const simpleMatch = fullTextContent.substring(0, Math.min(fullTextContent.length, 1000)).match(simpleRegex);
-                     if(simpleMatch && simpleMatch[1]){
-                        data.uicNdDirut = cleanText(simpleMatch[1]);
-                        break;
-                     }
-                }
-            }
-        }
-         // Fallback for UIC if still not found, search in actionPlanText again
-        if(data.uicNdDirut === "Data belum ditemukan"){
-            for (const keyword of uicKeywords) {
-                const regex = new RegExp(`${keyword}\\s*[:\\s-]*([^\\n,]+)`, "i");
-                const match = actionPlanText.match(regex);
-                if (match && match[1]) {
-                    data.uicNdDirut = cleanText(match[1]);
+            const matchKeywords = actionPlanText.toLowerCase().match(regex);
+            if (matchKeywords && matchKeywords[1]) {
+                const originalTextPortion = actionPlanText.substring(matchKeywords.index, matchKeywords.index + matchKeywords[0].length);
+                const valueMatchOriginalCase = originalTextPortion.match(regex);
+                if (valueMatchOriginalCase && valueMatchOriginalCase[1]) {
+                    data.picNdDirut = cleanText(valueMatchOriginalCase[1]);
                     break;
                 }
             }
         }
 
-      } catch (e) { console.warn("Error ekstraksi PIC/UIC ND Dirut:", e); }
+        if(data.uicNdDirut === "Data belum ditemukan"){ // UIC Search
+            for (const keyword of uicKeywords) {
+                const regex = new RegExp(`(?:${keyword}|kepada\\s*[:\\s-]*ykh\\.?\\s*([^\\n]+(?:${uicKeywords.join('|')})[^\\n]*))`, "i");
+                const headerText = fullTextContent.substring(0, Math.min(fullTextContent.length, 1000));
+                const matchKeywords = headerText.toLowerCase().match(regex);
 
-      // Status (Opportunistic search in conclusion)
-      try {
-        const statusKeywords = ["status\\s*:\\s*([^\\n]+)", "(closed)", "(sudah ditindaklanjuti)", "(selesai)"];
-        const conclusionText = fullTextContent.substring(Math.max(0, fullTextContent.length - 500)); // Last 500 chars
-        for (const keyword of statusKeywords) {
-            const regex = new RegExp(keyword, "i");
-            const match = conclusionText.match(regex);
-            if (match && match[1]) { // For "status : value"
-                data.status = cleanText(match[1]);
-                break;
-            } else if (match && match[0]) { // For keywords in parentheses
-                 data.status = cleanText(match[0].replace(/[()]/g, ''));
-                 break;
+                if (matchKeywords && matchKeywords[1]) {
+                     const originalTextPortion = headerText.substring(matchKeywords.index, matchKeywords.index + matchKeywords[0].length);
+                     const valueMatchOriginalCase = originalTextPortion.match(regex);
+                     if (valueMatchOriginalCase && valueMatchOriginalCase[1]) {
+                        data.uicNdDirut = cleanText(valueMatchOriginalCase[1].replace(/ykh\.?\s*/i, ''));
+                        break;
+                     }
+                } else if (matchKeywords && matchKeywords[0].toLowerCase().includes(keyword)) {
+                     const simpleRegex = new RegExp(`${keyword}\\s*[:\\s-]*([^\\n,]+)`, "i");
+                     const simpleMatchKeywords = headerText.toLowerCase().match(simpleRegex);
+                     if(simpleMatchKeywords && simpleMatchKeywords[1]){
+                        const simpleOriginalPortion = headerText.substring(simpleMatchKeywords.index, simpleMatchKeywords.index + simpleMatchKeywords[0].length);
+                        const simpleValueOriginal = simpleOriginalPortion.match(simpleRegex);
+                        if (simpleValueOriginal && simpleValueOriginal[1]) {
+                            data.uicNdDirut = cleanText(simpleValueOriginal[1]);
+                            break;
+                        }
+                     }
+                }
             }
         }
-      } catch (e) { console.warn("Error ekstraksi Status:", e); } // Old status text search can be removed or repurposed for flags
+        if(data.uicNdDirut === "Data belum ditemukan"){ // Fallback UIC in actionPlanText
+            for (const keyword of uicKeywords) {
+                const regex = new RegExp(`${keyword}\\s*[:\\s-]*([^\\n,]+)`, "i");
+                const matchKeywords = actionPlanText.toLowerCase().match(regex);
+                if (matchKeywords && matchKeywords[1]) {
+                    const originalTextPortion = actionPlanText.substring(matchKeywords.index, matchKeywords.index + matchKeywords[0].length);
+                    const valueMatchOriginalCase = originalTextPortion.match(regex);
+                    if (valueMatchOriginalCase && valueMatchOriginalCase[1]) {
+                        data.uicNdDirut = cleanText(valueMatchOriginalCase[1]);
+                        break;
+                    }
+                }
+            }
+        }
+      } catch (e) { console.warn("Error ekstraksi PIC/UIC ND Dirut:", e); }
 
       // --- Set flags based on textual cues ---
       try {
         const closedKeywords = ["closed", "selesai", "sudah ditindaklanjuti", "telah diselesaikan"];
-        // Search in the latter half of the document for closure status
-        const latterHalfText = fullTextContent.substring(Math.floor(fullTextContent.length / 2));
+        const latterHalfText = fullTextContentLowerCase.substring(Math.floor(fullTextContentLowerCase.length / 2));
         if (closedKeywords.some(kw => latterHalfText.includes(kw))) {
             data.mtlClosed = 1;
         }
@@ -531,20 +601,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
       try {
         const rescheduleKeywords = ["reschedule", "dijadwalkan ulang", "penyesuaian waktu"];
-        if (rescheduleKeywords.some(kw => fullTextContent.includes(kw))) {
+        if (rescheduleKeywords.some(kw => fullTextContentLowerCase.includes(kw))) {
             data.reschedule = 1;
         }
       } catch(e) { console.warn("Error checking for Reschedule keywords:", e); }
 
       try {
         const overdueKeywords = ["overdue", "terlambat", "lewat deadline"];
-        if (overdueKeywords.some(kw => fullTextContent.includes(kw))) {
+        if (overdueKeywords.some(kw => fullTextContentLowerCase.includes(kw))) {
             data.overdue = 1;
         }
       } catch(e) { console.warn("Error checking for Overdue keywords:", e); }
 
       // --- Derive Status field ---
-      // Note: data.onSchedule is initialized to 0. It can be set to 1 by popup if no other status applies.
       if (data.mtlClosed === 1) {
         data.status = "Closed";
       } else if (data.overdue === 1) {
@@ -552,63 +621,35 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       } else if (data.reschedule === 1) {
         data.status = "Reschedule";
       } else {
-        // If no specific textual cues for Closed, Overdue, Reschedule were found in NDE,
-        // default to "OnSchedule" from content.js perspective.
-        // The popup.js has its own default for OnSchedule if this remains "Data belum ditemukan".
-        // For clarity, if any significant data was extracted, we might assume "OnSchedule" here.
-        const hasAnyData = Object.values(data).some(val => val !== "Data belum ditemukan" && val !== "" && val !== 0);
-        if (hasAnyData && data.status === "Data belum ditemukan") { // Avoid overwriting if status was somehow already set by old logic
-             data.status = "OnSchedule"; // Default if other flags not set
-             data.onSchedule = 1; // Also set the flag for consistency
+        const hasAnySignificantData = Object.entries(data).some(([key, value]) => {
+            if (["temuanNdSvpIa", "rekomendasiNdSvpIa", "temuanNdDirut", "rekomendasiNdDirut"].includes(key)) {
+                return Array.isArray(value) && !(value.length === 1 && value[0] === "Data belum ditemukan");
+            }
+            return value !== "Data belum ditemukan" && value !== "" && value !== 0;
+        });
+        if (hasAnySignificantData && data.status === "Data belum ditemukan") {
+             data.status = "OnSchedule";
+             data.onSchedule = 1;
         }
       }
-      // The old opportunistic text search for data.status can be removed as per new logic.
-      // The above derivation is now the primary way data.status is set from content.js.
-
       console.log("Ekstraksi selesai dalam tryExtract.");
-    };
-
-    let observer = null;
-
-    const performExtractionAndSendResponse = () => {
-      const appVirtualDomElement = document.querySelector('app-virtualdom');
-      if (appVirtualDomElement && appVirtualDomElement.shadowRoot) {
-        const shadowContent = appVirtualDomElement.shadowRoot;
-        console.log("Shadow DOM ditemukan. Memulai ekstraksi.");
-        tryExtract(shadowContent, extractedData);
-        console.log("Data yang diekstrak:", extractedData);
-        sendResponse({ data: extractedData, success: true });
-        if (observer) {
-          observer.disconnect();
-          console.log("MutationObserver dihentikan.");
-        }
-      } else {
-        console.warn("app-virtualdom atau Shadow DOM tidak ditemukan saat performExtraction dipanggil.");
-        if (!observer || (observer && !observer.takeRecords().length)) { 
-             sendResponse({ data: extractedData, success: false, message: "Target element not found." });
-        }
-      }
-    };
-
-    // cleanText remains the same as it's generally useful.
-    // getTextFromTable is specific to the shadow DOM structure, so it will be used conditionally.
+    }; // End of tryExtract
 
     // Function to extract data from the new standard HTML structure
     const extractDataFromStandardHTML = (data) => {
       console.log("Asisten NDE: Attempting extraction from standard HTML structure.");
-      let success = true; // Assume success unless specific extractions fail to find key elements
+
+      const bodyFullText = document.body.innerText || "";
+      const bodyFullTextLowerCase = bodyFullText.toLowerCase();
 
       // Nomor Nota (ND SVP IA Nomor)
       try {
         const nomorLabel = Array.from(document.querySelectorAll('.grid .col-span-1.font-semibold'))
-                                .find(el => el.textContent.trim() === "Nomor");
+                                .find(el => el.textContent.trim().toLowerCase() === "nomor");
         if (nomorLabel && nomorLabel.nextElementSibling) {
           const nomorText = nomorLabel.nextElementSibling.textContent.replace(/^:\s*/, '').trim();
           data.nomorNdSvpIa = cleanText(nomorText);
-        } else {
-          data.nomorNdSvpIa = "Data belum ditemukan";
-          console.warn("Nomor Nota not found in standard HTML.");
-        }
+        } else { data.nomorNdSvpIa = "Data belum ditemukan"; }
       } catch (e) { data.nomorNdSvpIa = "Data belum ditemukan"; console.warn("Error extracting Nomor Nota (standard):", e); }
 
       // Perihal (Deskripsi ND SVP IA)
@@ -616,21 +657,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const perihalEl = document.getElementById('perihal');
         if (perihalEl) {
           data.deskripsiNdSvpIa = cleanText(perihalEl.textContent.replace(/^:\s*/, '').trim());
-        } else {
-          data.deskripsiNdSvpIa = "Data belum ditemukan";
-          console.warn("Perihal not found in standard HTML.");
-        }
+        } else { data.deskripsiNdSvpIa = "Data belum ditemukan"; }
       } catch (e) { data.deskripsiNdSvpIa = "Data belum ditemukan"; console.warn("Error extracting Perihal (standard):", e); }
       
       // Dari (Pengirim)
       try {
         const pengirimEl = document.getElementById('pengirim');
         if (pengirimEl) {
-          data.pengirim = cleanText(pengirimEl.textContent.replace(/^:\s*/, '').trim()); // Using 'pengirim' key
-        } else {
-          data.pengirim = "Data belum ditemukan";
-          console.warn("Pengirim not found in standard HTML.");
-        }
+          data.pengirim = cleanText(pengirimEl.textContent.replace(/^:\s*/, '').trim());
+        } else { data.pengirim = "Data belum ditemukan"; }
       } catch (e) { data.pengirim = "Data belum ditemukan"; console.warn("Error extracting Pengirim (standard):", e); }
 
       // Tanggal ND SVP IA (Document Date)
@@ -638,26 +673,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const dateEl = document.querySelector('main > div.mt-8.text-right');
         if (dateEl) {
           const dateText = dateEl.textContent.trim();
-          // Assuming format "Jakarta, 07 Juni 2024" or similar, extract the date part.
           const dateMatch = dateText.match(/(\d{1,2}\s+\w+\s+\d{4})/);
           if (dateMatch && dateMatch[1]) {
-            data.tanggalNdSvpIa = cleanText(dateMatch[1]); // Will be like "07 Juni 2024"
-          } else {
-            data.tanggalNdSvpIa = "Data belum ditemukan";
-            console.warn("Tanggal document not found or format mismatch in standard HTML.");
-          }
-        } else {
-          data.tanggalNdSvpIa = "Data belum ditemukan";
-        }
+            data.tanggalNdSvpIa = cleanText(dateMatch[1]);
+          } else { data.tanggalNdSvpIa = "Data belum ditemukan"; }
+        } else { data.tanggalNdSvpIa = "Data belum ditemukan"; }
       } catch (e) { data.tanggalNdSvpIa = "Data belum ditemukan"; console.warn("Error extracting Tanggal Document (standard):", e); }
 
       // Temuan (OFI)
       try {
         let ofiText = "";
         const ofiHeaderElement = Array.from(document.querySelectorAll('ol.list-decimal > li > p > strong, ol.list-decimal > li'))
-                                     .find(el => el.textContent.includes("opportunities for improvement (OFI)"));
+                                     .find(el => el.textContent.toLowerCase().includes("opportunities for improvement (ofi)"));
         if (ofiHeaderElement) {
-            // Find the parent <li> of the OFI header
             const ofiListItem = ofiHeaderElement.closest('li');
             if (ofiListItem) {
                 const ofiList = ofiListItem.querySelector('ol.list-alpha');
@@ -665,107 +693,64 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     const items = Array.from(ofiList.children)
                                        .map(li => li.textContent.trim())
                                        .filter(text => text.length > 0);
-                    ofiText = items.join('\n');
+                    ofiText = items.map(item => `- ${item}`).join('\n'); // Keep as single string with dashes for now
                 }
             }
         }
-        data.temuanNdSvpIa = ofiText ? cleanText(ofiText.substring(0, 1000)) : "Data belum ditemukan"; // Increased limit
-        if (!ofiText) console.warn("Temuan (OFI) not found in standard HTML.");
-      } catch (e) { data.temuanNdSvpIa = "Data belum ditemukan"; console.warn("Error extracting Temuan (OFI) (standard):", e); }
+        data.temuanNdSvpIa = ofiText ? parseListFromString(ofiText) : ["Data belum ditemukan"];
+        if(!ofiText) console.warn("Temuan (OFI) not found in standard HTML with specific structure.");
+      } catch (e) { data.temuanNdSvpIa = ["Data belum ditemukan"]; console.warn("Error extracting Temuan (OFI) (standard):", e); }
 
       // Rekomendasi
       try {
         let rekomendasiText = "";
         const rekHeaderElement = Array.from(document.querySelectorAll('ol.list-decimal > li > p > strong, ol.list-decimal > li'))
-                                    .find(el => el.textContent.includes("menyampaikan beberapa rekomendasi"));
+                                    .find(el => el.textContent.toLowerCase().includes("menyampaikan beberapa rekomendasi"));
         if (rekHeaderElement) {
             const rekListItem = rekHeaderElement.closest('li');
             if (rekListItem) {
                 const rekList = rekListItem.querySelector('ol.list-alpha');
                 if (rekList) {
                     const items = Array.from(rekList.children)
-                                       .map(li => li.textContent.trim()) // Could be more sophisticated to handle nested lists
+                                       .map(li => li.textContent.trim())
                                        .filter(text => text.length > 0);
-                    rekomendasiText = items.join('\n');
+                    rekomendasiText = items.map(item => `- ${item}`).join('\n'); // Keep as single string
                 }
             }
         }
-        data.rekomendasiNdSvpIa = rekomendasiText ? cleanText(rekomendasiText.substring(0,1000)) : "Data belum ditemukan"; // Increased limit
-        if(!rekomendasiText) console.warn("Rekomendasi not found in standard HTML.");
-      } catch (e) { data.rekomendasiNdSvpIa = "Data belum ditemukan"; console.warn("Error extracting Rekomendasi (standard):", e); }
+        data.rekomendasiNdSvpIa = rekomendasiText ? parseListFromString(rekomendasiText) : ["Data belum ditemukan"];
+        if(!rekomendasiText) console.warn("Rekomendasi not found in standard HTML with specific structure.");
+      } catch (e) { data.rekomendasiNdSvpIa = ["Data belum ditemukan"]; console.warn("Error extracting Rekomendasi (standard):", e); }
       
-      // Enhancement: Extract new fields from standard HTML
-      // These are examples; actual selectors/logic would depend on common NDE HTML structures not using Shadow DOM.
-
-      // Helper to find text by label in a definition list <dl><dt>Label</dt><dd>Value</dd></dl> or similar structure
-      const getTextAfterLabel = (labelKeyword) => {
-          try {
-              const allElements = document.querySelectorAll('p, span, div, td, dt, dd');
-              for (let el of allElements) {
-                  if (el.textContent.toLowerCase().includes(labelKeyword.toLowerCase())) {
-                      // Attempt to get next sibling, or parent's next sibling, or next dd if current is dt
-                      let valueElement = el.nextElementSibling;
-                      if (el.nodeName === 'DT' && el.nextElementSibling && el.nextElementSibling.nodeName === 'DD') {
-                          valueElement = el.nextElementSibling;
-                      } else if (!valueElement && el.parentElement.nextElementSibling) {
-                          valueElement = el.parentElement.nextElementSibling.querySelector('dd, td, :scope > span, :scope > div') || el.parentElement.nextElementSibling;
-                      }
-                      if (valueElement) return cleanText(valueElement.textContent.replace(/^[:\s-]+/, ''));
-                  }
-              }
-          } catch(e) { console.warn(`Error in getTextAfterLabel for ${labelKeyword}:`, e); }
-          return "Data belum ditemukan";
-      };
-
-      if (data.code === "Data belum ditemukan") data.code = getTextAfterLabel("code");
-      if (data.matriksProgram === "Data belum ditemukan") data.matriksProgram = getTextAfterLabel("matriks program");
-      if (data.tanggalMatriks === "Data belum ditemukan") data.tanggalMatriks = getTextAfterLabel("tanggal matriks");
-
-      if (data.nomorNdDirut === "Data belum ditemukan") data.nomorNdDirut = getTextAfterLabel("nomor nd dirut");
-      if (data.deskripsiNdDirut === "Data belum ditemukan") data.deskripsiNdDirut = getTextAfterLabel("perihal nd dirut");
-      if (data.tanggalNdDirut === "Data belum ditemukan") data.tanggalNdDirut = getTextAfterLabel("tanggal nd dirut");
-
-      // Temuan/Rekomendasi/Duedate/PIC/UIC for Dirut might be in more complex structures
-      // For now, these are less likely to be found with simple label searches in varied standard HTML
-      // Placeholder for more specific logic if patterns emerge:
-      // if (data.temuanNdDirut === "Data belum ditemukan") data.temuanNdDirut = getTextAfterLabel("temuan nd dirut");
-      // if (data.rekomendasiNdDirut === "Data belum ditemukan") data.rekomendasiNdDirut = getTextAfterLabel("rekomendasi nd dirut");
-      // if (data.duedateNdDirut === "Data belum ditemukan") data.duedateNdDirut = getTextAfterLabel("due date dirut");
-      // if (data.picNdDirut === "Data belum ditemukan") data.picNdDirut = getTextAfterLabel("pic nd dirut");
-      // if (data.uicNdDirut === "Data belum ditemukan") data.uicNdDirut = getTextAfterLabel("uic nd dirut");
-
-      // More robust keyword-based extraction for standard HTML
       const allTextElements = Array.from(document.querySelectorAll('p, span, div, td, li, h1, h2, h3, h4, strong'));
-
-      // Helper to find value after keyword in an element's text or subsequent text nodes/elements
-      const extractValueAfterKeyword = (elements, keywords, regexPattern, contextKeywords = []) => {
+      const extractValueAfterKeyword = (elements, keywords, regexPattern, contextKeywords = [], isCaseSensitiveValue = false) => {
           for (const el of elements) {
-              const elText = el.innerText || el.textContent || "";
-              if (!elText.trim()) continue;
+              const elFullText = el.innerText || el.textContent || "";
+              if (!elFullText.trim()) continue;
 
-              let relevantText = elText.toLowerCase();
-              let foundContext = contextKeywords.length === 0; // True if no context needed
-              if (contextKeywords.length > 0) {
-                  if (contextKeywords.some(ck => relevantText.includes(ck.toLowerCase()))) {
+              const elSearchText = isCaseSensitiveValue ? elFullText : elFullText.toLowerCase();
+
+              let foundContext = contextKeywords.length === 0;
+              if (!foundContext) {
+                  if (contextKeywords.some(ck => elSearchText.includes(ck.toLowerCase()))) {
                       foundContext = true;
-                  } else { // Check parent elements for context too, up to 3 levels
+                  } else {
                       let parent = el.parentElement;
                       for (let i = 0; i < 3 && parent; i++) {
-                          if (parent.innerText && contextKeywords.some(ck => parent.innerText.toLowerCase().includes(ck.toLowerCase()))) {
+                          const parentFullText = parent.innerText || parent.textContent || "";
+                          if (parentFullText && contextKeywords.some(ck => (isCaseSensitiveValue ? parentFullText : parentFullText.toLowerCase()).includes(ck.toLowerCase()))) {
                               foundContext = true;
-                              relevantText = parent.innerText.toLowerCase(); // Use parent text if context found here
                               break;
                           }
                           parent = parent.parentElement;
                       }
                   }
               }
-
               if (!foundContext) continue;
 
               for (const keyword of keywords) {
-                  const keywordRegex = new RegExp(keyword.toLowerCase() + regexPattern, "i");
-                  const match = relevantText.match(keywordRegex);
+                  const keywordRegex = new RegExp(keyword.toLowerCase() + regexPattern, "i"); // Keyword match always case-insensitive
+                  const match = elFullText.match(keywordRegex); // Match on original case text to capture original case value
                   if (match && match[1] && match[1].trim()) {
                       return cleanText(match[1]);
                   }
@@ -774,113 +759,102 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           return "Data belum ditemukan";
       };
 
-      // Nomor ND SVP IA (fallback)
+      // Fallbacks using extractValueAfterKeyword if specific selectors failed
       if (data.nomorNdSvpIa === "Data belum ditemukan") {
         const nomorKeywords = ["nomor nd", "nota dinas", "no.", "nomor"];
         const generalPattern = "\\s*[:\\s]*([A-Z0-9\\/\\.\\-\\s]+[A-Z0-9])";
-        const specificPatternForNomor = "\\s*[:\\s]*([A-Z0-9\\/\\.\\-\\s]*[A-Z0-9\\/][A-Z0-9\\/\\.\\-\\s]*)"; // Must contain letter or slash for generic "nomor"
-
-        let foundNomor = "Data belum ditemukan";
+        const specificPatternForNomor = "\\s*[:\\s]*([A-Z0-9\\/\\.\\-\\s]*[A-Z0-9\\/][A-Z0-9\\/\\.\\-\\s]*)";
         for(const keyword of nomorKeywords) {
             let pattern = (keyword === "nomor") ? specificPatternForNomor : generalPattern;
-            foundNomor = extractValueAfterKeyword(allTextElements.slice(0, 30), [keyword], pattern);
-            if (foundNomor !== "Data belum ditemukan" && foundNomor.length > 5) {
-                 data.nomorNdSvpIa = cleanText(foundNomor.replace(/\s+/g, ' ').trim());
-                 break;
-            } else {
-                foundNomor = "Data belum ditemukan"; // Reset if too short or not found
-            }
-        }
-        if (foundNomor !== "Data belum ditemukan" && data.nomorNdSvpIa === "Data belum ditemukan") { // If loop finished with a short match not assigned
-            data.nomorNdSvpIa = cleanText(foundNomor.replace(/\s+/g, ' ').trim());
+            const found = extractValueAfterKeyword(allTextElements.slice(0, 30), [keyword], pattern, [], true);
+            if (found !== "Data belum ditemukan" && found.length > 5) { data.nomorNdSvpIa = found; break; }
         }
       }
-      // Deskripsi ND SVP IA (fallback)
       if (data.deskripsiNdSvpIa === "Data belum ditemukan") {
          data.deskripsiNdSvpIa = extractValueAfterKeyword(allTextElements.slice(0,30), ["perihal", "subject", "hal"], "\\s*[:\\s]*([^\\n]+)");
       }
-      // Tanggal ND SVP IA (fallback - search towards the end)
       if (data.tanggalNdSvpIa === "Data belum ditemukan") {
         const footerElements = allTextElements.slice(Math.max(0, allTextElements.length - 30));
-        data.tanggalNdSvpIa = extractValueAfterKeyword(footerElements, ["tanggal", ""], "\\s*[:\\s]*(\\d{1,2}\\s+\\w+\\s+\\d{4})"); // Empty keyword to catch dates near end
+        data.tanggalNdSvpIa = extractValueAfterKeyword(footerElements, ["tanggal", ""], "\\s*[:\\s]*(\\d{1,2}\\s+\\w+\\s+\\d{4})");
       }
 
-      // No SPK
       if (data.noSPK === "Data belum ditemukan") {
-        data.noSPK = extractValueAfterKeyword(allTextElements, ["spk", "surat perintah kerja", "nomor spk"], "\\s*[:\\s]*([\\w\\/\\.\\-]+)");
+        const spkRegexDetailedStd = /(?:Surat Perintah Kerja|SPK)(?:\s*\(SPK\))?\s*(?:Nomor|No\.?)\s*[:\s-]*([\w\/.-]+(?:\/[\w.-]+)*)/i;
+        const spkMatchDetailedStd = bodyFullText.match(spkRegexDetailedStd);
+        if (spkMatchDetailedStd && spkMatchDetailedStd[1]) {
+          data.noSPK = cleanText(spkMatchDetailedStd[1].toUpperCase());
+        } else {
+          data.noSPK = extractValueAfterKeyword(allTextElements, ["spk", "surat perintah kerja", "nomor spk"], "\\s*[:\\s]*([\\w\\/\\.\\-]+)", [], true);
+        }
       }
-      // CODE
       if (data.code === "Data belum ditemukan") {
-        data.code = extractValueAfterKeyword(allTextElements, ["kode", "code", "audit code", "kode temuan"], "\\s*[:\\s]*([\\w\\/\\.\\-]+)").toUpperCase();
+        data.code = extractValueAfterKeyword(allTextElements, ["kode", "code", "audit code", "kode temuan"], "\\s*[:\\s]*([\\w\\/\\.\\-]+)", [], true).toUpperCase();
       }
-      // Matriks Program & Tanggal Matriks
       if (data.matriksProgram === "Data belum ditemukan") {
         data.matriksProgram = extractValueAfterKeyword(allTextElements, ["matriks program", "pkat", "pknat", "program kerja audit tahunan"], "\\s*[:\\s-]*([^\\n]+(?:(?:program|matriks)[^\\n]*)?)");
       }
       if (data.tanggalMatriks === "Data belum ditemukan") {
         data.tanggalMatriks = extractValueAfterKeyword(allTextElements, ["tanggal matriks", "tanggal pkat", "tanggal pknat"], "\\s*[:\\s-]*(\\d{1,2}\\s+\\w+\\s+\\d{4})", ["matriks", "pkat", "pknat"]);
       }
-      // Kelompok
       if (data.kelompok === "Data belum ditemukan") {
         data.kelompok = extractValueAfterKeyword(allTextElements, ["kelompok temuan", "jenis temuan", "kategori temuan", "kelompok:"], "\\s*[:\\s-]*([^\\n]+)");
       }
-      // Masa Penyelesaian Pekerjaan
       if (data.masaPenyelesaianPekerjaan === "Data belum ditemukan") {
         data.masaPenyelesaianPekerjaan = extractValueAfterKeyword(allTextElements, ["masa penyelesaian", "batas waktu", "selesai dalam"], "\\s*[:\\s-]*([^\\n]+(?:(?:minggu|bulan|hari)[^\\n]*)?)", ["due date", "target"]);
       }
 
-      // ND Dirut Fields - using context keywords "ND Dirut", "Direktur Utama"
+      // Fallback for Temuan/Rekomendasi if specific list structure wasn't found
+      let isTemuanDefaultHTML = (Array.isArray(data.temuanNdSvpIa) && data.temuanNdSvpIa.length === 1 && data.temuanNdSvpIa[0] === "Data belum ditemukan");
+      if(isTemuanDefaultHTML) {
+          const temuanText = extractValueAfterKeyword(allTextElements, ["temuan", "ofi", "opportunity for improvement"], "\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:rekomendasi|tindak lanjut|\\n\\n[\\w\\s]{15,}|$))");
+          if (temuanText !== "Data belum ditemukan") data.temuanNdSvpIa = parseListFromString(temuanText.substring(0,2000));
+      }
+      let isRekDefaultHTML = (Array.isArray(data.rekomendasiNdSvpIa) && data.rekomendasiNdSvpIa.length === 1 && data.rekomendasiNdSvpIa[0] === "Data belum ditemukan");
+      if(isRekDefaultHTML) {
+          const rekText = extractValueAfterKeyword(allTextElements, ["rekomendasi", "kami menyampaikan rekomendasi"], "\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:pic|uic|due date|tindak lanjut|penutup|\\n\\n[\\w\\s]{15,}|$))");
+          if (rekText !== "Data belum ditemukan") data.rekomendasiNdSvpIa = parseListFromString(rekText.substring(0,2000));
+      }
+
+      // ND Dirut Fields
       const dirutContext = ["nd dirut", "direktur utama"];
       if (data.nomorNdDirut === "Data belum ditemukan") {
-        data.nomorNdDirut = extractValueAfterKeyword(allTextElements, ["nomor"], "\\s*[:\\s-]*([\\w\\/\\.\\-]+)", dirutContext);
+        data.nomorNdDirut = extractValueAfterKeyword(allTextElements, ["nomor"], "\\s*[:\\s-]*([\\w\\/\\.\\-]+)", dirutContext, true);
       }
+      // ... (similar updates for other ND Dirut fields to use extractValueAfterKeyword and parseListFromString for temuan/rekomendasi)
       if (data.deskripsiNdDirut === "Data belum ditemukan") {
         data.deskripsiNdDirut = extractValueAfterKeyword(allTextElements, ["perihal", "hal"], "\\s*[:\\s-]*([^\\n]+)", dirutContext);
       }
       if (data.tanggalNdDirut === "Data belum ditemukan") {
         data.tanggalNdDirut = extractValueAfterKeyword(allTextElements, ["tanggal"], "\\s*[:\\s-]*(\\d{1,2}\\s+\\w+\\s+\\d{4})", dirutContext);
       }
-      if (data.temuanNdDirut === "Data belum ditemukan") {
-         data.temuanNdDirut = extractValueAfterKeyword(allTextElements, ["temuan", "ofi"], "\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:rekomendasi|tindak lanjut|\\n\\n[\\w\\s]{5,}|pic|uic|due date|$))", dirutContext);
-         if (data.temuanNdDirut !== "Data belum ditemukan") data.temuanNdDirut = data.temuanNdDirut.substring(0,500);
+      let isTemuanDirutDefaultHTML = (Array.isArray(data.temuanNdDirut) && data.temuanNdDirut.length === 1 && data.temuanNdDirut[0] === "Data belum ditemukan");
+      if(isTemuanDirutDefaultHTML){
+          const temuanDirutText = extractValueAfterKeyword(allTextElements, ["temuan", "ofi"], "\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:rekomendasi|tindak lanjut|\\n\\n[\\w\\s]{5,}|pic|uic|due date|$))", dirutContext);
+          if(temuanDirutText !== "Data belum ditemukan") data.temuanNdDirut = parseListFromString(temuanDirutText.substring(0,1000));
       }
-      if (data.rekomendasiNdDirut === "Data belum ditemukan") {
-        data.rekomendasiNdDirut = extractValueAfterKeyword(allTextElements, ["rekomendasi", "kami menyampaikan rekomendasi"], "\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:pic|uic|due date|tindak lanjut|penutup|hormat kami|demikian|\\n\\n[\\w\\s]{5,}|$))", dirutContext);
-        if (data.rekomendasiNdDirut !== "Data belum ditemukan") data.rekomendasiNdDirut = data.rekomendasiNdDirut.substring(0,500);
+      let isRekDirutDefaultHTML = (Array.isArray(data.rekomendasiNdDirut) && data.rekomendasiNdDirut.length === 1 && data.rekomendasiNdDirut[0] === "Data belum ditemukan");
+      if(isRekDirutDefaultHTML){
+          const rekDirutText = extractValueAfterKeyword(allTextElements, ["rekomendasi"], "\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:pic|uic|due date|tindak lanjut|penutup|\\n\\n[\\w\\s]{5,}|$))", dirutContext);
+          if(rekDirutText !== "Data belum ditemukan") data.rekomendasiNdDirut = parseListFromString(rekDirutText.substring(0,1000));
       }
       if (data.duedateNdDirut === "Data belum ditemukan") {
-        data.duedateNdDirut = extractValueAfterKeyword(allTextElements, ["paling lambat", "due date", "target penyelesaian", "tindak lanjut.*(?:tanggal|target)"], "\\s*[:\\s-]*((?:\\d{1,2}\\s+\\w+\\s+\\d{4})|[^\\n\\.,]+(?:minggu|bulan|hari|triwulan|semester|tahun))", ["rencana tindak lanjut", "action plan"].concat(dirutContext));
+        data.duedateNdDirut = extractValueAfterKeyword(allTextElements, ["paling lambat", "due date", "target penyelesaian"], "\\s*[:\\s-]*((?:\\d{1,2}\\s+\\w+\\s+\\d{4})|[^\\n\\.,]+(?:minggu|bulan|hari|triwulan|semester|tahun))", ["rencana tindak lanjut", "action plan"].concat(dirutContext));
       }
       if (data.picNdDirut === "Data belum ditemukan") {
-        data.picNdDirut = extractValueAfterKeyword(allTextElements, ["pic", "penanggung jawab", "auditee"], "\\s*[:\\s-]*([^\\n,]+)", ["rekomendasi", "tindak lanjut"].concat(dirutContext));
+        data.picNdDirut = extractValueAfterKeyword(allTextElements, ["pic", "penanggung jawab"], "\\s*[:\\s-]*([^\\n,]+)", ["rekomendasi", "tindak lanjut"].concat(dirutContext));
       }
       if (data.uicNdDirut === "Data belum ditemukan") {
-        // Search UIC in header context first
-        data.uicNdDirut = extractValueAfterKeyword(allTextElements.slice(0,30), ["uic", "unit kerja", "divisi", "direktorat", "kepada yth"], "\\s*[:\\s-]*([^\\n,]+)", dirutContext.length > 0 ? dirutContext : []);
-        if (data.uicNdDirut === "Data belum ditemukan") { // Fallback to general search if not in header context for dirut
-             data.uicNdDirut = extractValueAfterKeyword(allTextElements, ["uic", "unit kerja", "divisi", "direktorat"], "\\s*[:\\s-]*([^\\n,]+)", dirutContext);
+        data.uicNdDirut = extractValueAfterKeyword(allTextElements.slice(0,30), ["uic", "unit kerja", "kepada yth"], "\\s*[:\\s-]*([^\\n,]+)", dirutContext.length > 0 ? dirutContext : []);
+        if (data.uicNdDirut === "Data belum ditemukan") {
+             data.uicNdDirut = extractValueAfterKeyword(allTextElements, ["uic", "unit kerja"], "\\s*[:\\s-]*([^\\n,]+)", dirutContext);
         }
       }
-      // Status
-      if (data.status === "Data belum ditemukan") {
-        const footerElements = allTextElements.slice(Math.max(0, allTextElements.length - 20));
-        data.status = extractValueAfterKeyword(footerElements, ["status"], "\\s*[:\\s-]*([^\\n]+)");
-        if (data.status === "Data belum ditemukan") { // Fallback to simple keyword presence
-            if (footerElements.some(el => el.textContent.toLowerCase().includes("closed") || el.textContent.toLowerCase().includes("sudah ditindaklanjuti"))) data.status = "Closed";
-            else if (footerElements.some(el => el.textContent.toLowerCase().includes("reschedule"))) data.status = "Reschedule";
-            else if (footerElements.some(el => el.textContent.toLowerCase().includes("overdue"))) data.status = "Overdue";
-            else if (footerElements.some(el => el.textContent.toLowerCase().includes("on schedule"))) data.status = "OnSchedule";
-        }
-      }
-
-      // For fields not in this HTML, they will retain "Data belum ditemukan"
 
       // --- Set flags based on textual cues in Standard HTML ---
       try {
         const closedKeywords = ["closed", "selesai", "sudah ditindaklanjuti", "telah diselesaikan"];
-        // Check last few elements for closure status
-        const footerElements = allTextElements.slice(Math.max(0, allTextElements.length - 20));
-        if (footerElements.some(el => closedKeywords.some(kw => (el.innerText || el.textContent || "").toLowerCase().includes(kw)))) {
+        const footerElementsText = allTextElements.slice(Math.max(0, allTextElements.length - 20)).map(el => (el.innerText || el.textContent || "").toLowerCase()).join(" ");
+        if (closedKeywords.some(kw => footerElementsText.includes(kw))) {
             data.mtlClosed = 1;
         }
       } catch(e) { console.warn("Error checking for MTL Closed keywords (standard HTML):", e); }
@@ -907,18 +881,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       } else if (data.reschedule === 1) {
         data.status = "Reschedule";
       } else {
-        const hasAnyData = Object.values(data).some(val => val !== "Data belum ditemukan" && val !== "" && val !== 0);
-        if (hasAnyData && data.status === "Data belum ditemukan") {
+        const hasAnySignificantData = Object.entries(data).some(([key, value]) => {
+            if (["temuanNdSvpIa", "rekomendasiNdSvpIa", "temuanNdDirut", "rekomendasiNdDirut"].includes(key)) {
+                return Array.isArray(value) && !(value.length === 1 && value[0] === "Data belum ditemukan");
+            }
+            return value !== "Data belum ditemukan" && value !== "" && value !== 0;
+        });
+        if (hasAnySignificantData && data.status === "Data belum ditemukan") {
              data.status = "OnSchedule";
              data.onSchedule = 1;
         }
       }
-      // The old text search for status (using extractValueAfterKeyword for "status") is removed.
-      // data.status is now derived.
-
       console.log("Asisten NDE: Standard HTML extraction attempt complete.");
-      return success; // For now, always return true if it runs, popup handles "Data belum ditemukan"
-    };
+    }; // End of extractDataFromStandardHTML
 
 
     // --- Detection and Execution Logic ---
@@ -927,83 +902,74 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     const standardHtmlPengirim = document.getElementById('pengirim');
 
     if (appVirtualDomElement && appVirtualDomElement.shadowRoot) {
-        // TYPE 1: Shadow DOM / app-virtualdom based MHTML
         console.log("Asisten NDE: app-virtualdom with Shadow DOM found. Proceeding with Shadow DOM extraction.");
         tryExtract(appVirtualDomElement.shadowRoot, extractedData); 
         console.log("Asisten NDE: Data extracted via Shadow DOM:", extractedData);
         sendResponse({ data: extractedData, success: true });
         return true; 
-
     } else if (standardHtmlPerihal && standardHtmlPengirim) {
-        // TYPE 2: Standard HTML structure (found key elements immediately)
-        console.log("Asisten NDE: Standard HTML structure detected upfront (found #perihal and #pengirim).");
+        console.log("Asisten NDE: Standard HTML structure detected upfront.");
         extractDataFromStandardHTML(extractedData);
         console.log("Asisten NDE: Data extracted via Standard HTML (upfront):", extractedData);
         sendResponse({ data: extractedData, success: true });
         return true; 
-
     } else {
-        // Fallback: Neither structure found immediately.
-        // This path will primarily observe for late-appearing app-virtualdom.
-        // If app-virtualdom doesn't appear by timeout, it will then try standard HTML parsing as a last resort.
-        console.log("Asisten NDE: Key markers for either structure not immediately found. Setting up MutationObserver for late-appearing app-virtualdom.");
-        let observer = null;
+        console.log("Asisten NDE: Key markers not immediately found. Setting up MutationObserver.");
+        let observerInst = null; // Renamed to avoid conflict with global observer
         let observationTimeout = null;
 
         const finalizeExtractionAfterObserver = (appVirtualDomWasFound) => {
+            if (observationTimeout) clearTimeout(observationTimeout);
+            if (observerInst) observerInst.disconnect();
+            observerInst = null;
+
             if (!appVirtualDomWasFound) {
-                // If app-virtualdom was NOT found by the observer/timeout, attempt standard HTML extraction.
-                console.log("Asisten NDE: app-virtualdom not found by observer/timeout. Attempting standard HTML extraction as final fallback.");
+                console.log("Asisten NDE: app-virtualdom not found by observer. Attempting standard HTML extraction as fallback.");
                 extractDataFromStandardHTML(extractedData);
             }
-            // else if appVirtualDomWasFound, tryExtract would have already populated extractedData.
 
             const wasAnythingExtracted = Object.values(extractedData).some(
-                val => val !== "Data belum ditemukan" && val !== "" && val !== 0 && val !== undefined && val !== null
+                val => val !== "Data belum ditemukan" && val !== "" && val !== 0 &&
+                       !(Array.isArray(val) && val.length === 1 && val[0] === "Data belum ditemukan")
             );
 
             if (wasAnythingExtracted) {
                 console.log("Asisten NDE: Final extracted data after observer/fallback:", extractedData);
                 sendResponse({ data: extractedData, success: true });
             } else {
-                console.warn("Asisten NDE: No data extracted after all attempts (observer and fallback standard parse).");
+                console.warn("Asisten NDE: No data extracted after all attempts.");
                 sendResponse({ 
                     data: extractedData, 
                     success: false, 
-                    message: "Could not identify document structure or extract data after all attempts (20s)." 
+                    message: "Could not identify document structure or extract significant data."
                 });
             }
         };
       
-        observer = new MutationObserver((mutationsList, obs) => {
+        observerInst = new MutationObserver((mutationsList, obs) => {
             const avdElementObserved = document.querySelector('app-virtualdom');
             if (avdElementObserved && avdElementObserved.shadowRoot) {
                 console.log("Asisten NDE: app-virtualdom detected by MutationObserver.");
-                if (observationTimeout) clearTimeout(observationTimeout);
-                obs.disconnect(); 
-                observer = null; 
-                tryExtract(avdElementObserved.shadowRoot, extractedData); // Populate data
-                finalizeExtractionAfterObserver(true); // Indicate app-virtualdom was found
+                tryExtract(avdElementObserved.shadowRoot, extractedData);
+                finalizeExtractionAfterObserver(true);
             }
         });
 
-        observer.observe(document.documentElement, { childList: true, subtree: true });
+        observerInst.observe(document.documentElement, { childList: true, subtree: true });
         console.log("Asisten NDE: MutationObserver for app-virtualdom active.");
 
         observationTimeout = setTimeout(() => {
-            if (observer) { // If observer is still active, it means app-virtualdom wasn't found
-                console.warn("Asisten NDE: MutationObserver timeout (20s) reached for app-virtualdom.");
-                observer.disconnect();
-                observer = null;
-                finalizeExtractionAfterObserver(false); // Indicate app-virtualdom was NOT found
-            }
-        }, 20000); 
+            // If observer is still running, it means app-virtualdom wasn't found in time.
+             if (observerInst) {
+                console.warn("Asisten NDE: MutationObserver timeout reached for app-virtualdom.");
+                finalizeExtractionAfterObserver(false);
+             }
+        }, 10000); // Reduced timeout for faster fallback if needed
 
-        return true; // Indicates async response for the observer path
+        return true;
     }
-    // Note: The final 'return true;' from the original code was removed as each path should handle its own sendResponse or async indication.
-  }
-});
+  } // End of if (request.action === "getDataFromNDE")
+}); // End of chrome.runtime.onMessage.addListener
 
 console.log("Content script NDE 'content.js' dimuat dan listener aktif.");
 

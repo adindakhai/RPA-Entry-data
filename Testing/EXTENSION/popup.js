@@ -161,6 +161,25 @@ document.addEventListener('DOMContentLoaded', () => {
         showError('');
 
         try {
+            // Helper function to parse list-like values from popup textareas
+            function parsePopupListValue(inputValue) {
+                if (!inputValue || typeof inputValue !== 'string' || inputValue.trim().toLowerCase() === "data belum ditemukan" || inputValue.trim() === "") {
+                    return ["Data belum ditemukan"];
+                }
+                // Attempt to split by newline first, assuming user might edit with newlines
+                let items = inputValue.split('\n').map(line => line.trim()).filter(line => line);
+                if (items.length > 0 && (items.length > 1 || items[0] !== inputValue.trim())) { // Check if split by newline was effective
+                    return items;
+                }
+                // If not effectively split by newline (e.g., single line of comma-separated values), split by comma
+                items = inputValue.split(',').map(item => item.trim()).filter(item => item);
+                if (items.length > 0) {
+                    return items;
+                }
+                // If input is a non-empty string but not parsed into multiple items, return as single item array
+                return [inputValue.trim()];
+            }
+
             // Prepare data for MTL, using only the new field list
             const dataForMTL = {
                 no_spk: noSpkInput.value || '',
@@ -172,13 +191,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 ND_SVP_IA_Nomor: nomorNdSvpIaInput.value || '',
                 Desc_ND_SVP_IA: deskripsiNdSvpIaInput.value || '',
                 ND_SVP_IA_Tanggal: tanggalNdSvpIaInput.value || '',
-                ND_SVP_IA_Temuan: temuanNdSvpIaInput.value || '',
-                ND_SVP_IA_Rekomendasi: rekomendasiNdSvpIaInput.value || '',
+                ND_SVP_IA_Temuan: parsePopupListValue(temuanNdSvpIaInput.value),
+                ND_SVP_IA_Rekomendasi: parsePopupListValue(rekomendasiNdSvpIaInput.value),
                 ND_Dirut_Nomor: nomorNdDirutInput.value || '',
                 Desc_ND_Dirut: deskripsiNdDirutInput.value || '',
                 ND_Dirut_Tgl: tanggalNdDirutInput.value || '',
-                ND_Dirut_Temuan: temuanNdDirutInput.value || '',
-                ND_Dirut_Rekomendasi: rekomendasiNdDirutInput.value || '',
+                ND_Dirut_Temuan: parsePopupListValue(temuanNdDirutInput.value),
+                ND_Dirut_Rekomendasi: parsePopupListValue(rekomendasiNdDirutInput.value),
                 ND_Dirut_Duedate1: duedateNdDirutInput.value || '',
                 ND_Dirut_Duedate2: '', // Only one due date field in popup, so leave this empty
                 ND_Dirut_PIC: picNdDirutInput.value || '',
