@@ -89,76 +89,58 @@ function parseListFromString(textBlock) {
         return ["Data belum ditemukan"];
     }
 
-    const lines = textBlock.split('\n');
+    if (!textBlock || typeof textBlock !== 'string') {
+        return ["Data belum ditemukan"];
+    }
+
+    const trimmedTextBlock = textBlock.trim();
+    if (!trimmedTextBlock) {
+        return ["Data belum ditemukan"];
+    }
+
+    const lines = trimmedTextBlock.split('\n');
     const listItems = [];
-    let currentItem = '';
-    const listItemRegex = /^\s*(?:[-*•–]|\d+[.)]|[a-zA-Z][.)])\s*(.*)/;
-    let firstRealLineChecked = false;
-    let looksLikeAList = false;
+    let currentItemBuffer = []; // Buffer for lines that might belong to one item
+
+    const actionVerbPattern = "(?:Melakukan|Meningkatkan|Merevisi|Menggunakan|Menindaklanjuti|Memastikan|Mengembangkan|Menyusun|Menetapkan|Mengimplementasikan|Mengintegrasikan|Mengoptimalkan|Mengevaluasi|Mensosialisasikan)";
+    const newItemStartRegex = new RegExp(
+        `^\\s*(?:(?:[-*•–]|\\d+[.)]|[a-zA-Z][.)])\\s+|${actionVerbPattern}\\s+|DT\\s+)`,
+        "i"
+    );
+    const ofiItemRegex = /;\s*$/;
 
     for (const line of lines) {
         const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
+        if (/^\(sudah ditindaklanjuti,\s*closed\)$/i.test(trimmedLine)) continue;
 
-        if (!firstRealLineChecked && trimmedLine) {
-            if (listItemRegex.test(trimmedLine)) {
-                looksLikeAList = true;
+        if (ofiItemRegex.test(trimmedLine)) {
+            if (currentItemBuffer.length > 0) {
+                listItems.push(currentItemBuffer.join('\n').trim());
             }
-            firstRealLineChecked = true;
-            // If it doesn't look like a list from the first real line, we might treat the whole block as one.
-            // However, a list could start later. So, we continue parsing but keep this flag.
-        }
-
-        if (!trimmedLine) {
-            // Optional: if empty lines should definitely break items.
-            // if (currentItem) {
-            //     listItems.push(currentItem.trim());
-            //     currentItem = '';
-            // }
-            continue;
-        }
-
-        const match = trimmedLine.match(listItemRegex);
-        if (match) {
-            if (currentItem) { // If there was a previous item being built (e.g. multi-line non-list item, or previous list item)
-                listItems.push(currentItem.trim());
+            listItems.push(trimmedLine);
+            currentItemBuffer = [];
+        } else if (newItemStartRegex.test(trimmedLine)) {
+            if (currentItemBuffer.length > 0) {
+                listItems.push(currentItemBuffer.join('\n').trim());
             }
-            currentItem = match[1] ? match[1].trim() : ''; // Start new list item
-            looksLikeAList = true; // Reinforce that it looks like a list
-        } else { // Line does not start with a list marker
-            if (currentItem) { // If we are building an item, append this line to it
-                currentItem += (currentItem.endsWith('\n') ? '' : '\n') + trimmedLine;
+            currentItemBuffer = [trimmedLine];
+        } else {
+            if (currentItemBuffer.length > 0) {
+                currentItemBuffer.push(trimmedLine);
             } else {
-                // This is a line without a list marker, and no item is currently being built.
-                // This could be the first line of a block that isn't a list, or an orphan line.
-                // We'll let currentItem accumulate it. If a list marker appears later, this will be pushed.
-                // If no list markers appear at all, the fallback logic will handle it.
-                currentItem = trimmedLine;
+                currentItemBuffer = [trimmedLine];
             }
         }
     }
 
-    if (currentItem) { // Push any remaining accumulated item
-        listItems.push(currentItem.trim());
+    if (currentItemBuffer.length > 0) {
+        listItems.push(currentItemBuffer.join('\n').trim());
     }
 
-    // If, after all parsing, we found list-like structures OR if the original textBlock had newlines
-    // suggesting multiple distinct paragraphs that the user might want separated:
-    if (looksLikeAList || (listItems.length > 0 && listItems.some(item => item.includes('\n')))) {
-        // Standard return: filter out any empty strings that might have resulted from trimming.
-        const nonEmptyItems = listItems.filter(item => item && item !== "Data belum ditemukan");
-        return nonEmptyItems.length > 0 ? nonEmptyItems : ["Data belum ditemukan"];
-    }
+    const finalItems = listItems.filter(item => item && item.length > 0 && item.toLowerCase() !== "data belum ditemukan");
 
-    // Fallback: If it never really looked like a list (no markers found)
-    // and the parsing resulted in zero or one item that is essentially the whole block,
-    // or if the textBlock is just a single line of text without newlines.
-    // In this case, we return the entire textBlock as a single item, trimmed.
-    // This is to preserve long paragraphs that are not meant to be lists.
-    if (textBlock.trim()) {
-        return [textBlock.trim()];
-    }
-
-    return ["Data belum ditemukan"]; // Should not be reached if textBlock has content
+    return finalItems.length > 0 ? finalItems : [trimmedTextBlock];
 }
 
 
@@ -286,56 +268,73 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       try {
         let ofiTextContent = null;
         let rekomendasiTextContent = null;
-        let rekomendasiLinkedToOFI = false;
+        let rekomendasiLinkedToOFI = false; // This variable might need to be re-evaluated based on new structure.
 
-        const ofiKeywords = ["opportunity for improvement", "ofi", "temuan"];
-        const ofiRegex = new RegExp(`(?:${ofiKeywords.join('|')})\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:(?:\\n|^)\\s*(?:rekomendasi|kami menyampaikan rekomendasi))|\\n\\n[\\w\\s]{15,}|\Z)`, "i");
-        const ofiMatch = fullTextContent.match(ofiRegex);
+        // OFI (Temuan) Extraction
+        const ofiKeywords = ["opportunities for improvement\\s*\\(ofi\\)", "ofi", "temuan"];
+        const ofiSectionRegex = new RegExp(
+            `(?:${ofiKeywords.join('|')})` +
+            `[^\\n]*?sebagai berikut:\\s*` +
+            `([\\s\\S]*?)` +
+            `(?=\\n\\s*Terhadap OFI tersebut, kami menyampaikan rekomendasi|\\n\\s*Permasalahan di atas telah kami klarifikasi|\\n\\n[\\w\\s]{15,}|$)`,
+            "i"
+        );
+        const ofiMatch = fullTextContent.match(ofiSectionRegex);
 
-        if (ofiMatch && ofiMatch[1] && ofiMatch[1].trim().length > 3) {
-            ofiTextContent = ofiMatch[1].substring(0, 2000);
+        if (ofiMatch && ofiMatch[1] && ofiMatch[1].trim().length > 0) { // Changed length check to > 0 for safety
+            ofiTextContent = ofiMatch[1].trim(); // .substring(0, 2000) can be applied after parsing if needed
             data.temuanNdSvpIa = parseListFromString(ofiTextContent);
-
-            const textImmediatelyAfterOFI = fullTextContent.substring(ofiMatch.index + ofiMatch[1].length);
-            const rekomendasiKeywords = ["rekomendasi", "kami menyampaikan rekomendasi"];
-            const rekRegexLinked = new RegExp(`(?:^|\\n)\\s*(?:${rekomendasiKeywords.join('|')})\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:tindak\\s+lanjut|penutup|hormat kami|demikian|\\n\\n[\\w\\s]{15,}|\Z))`, "i");
-            const rekMatchLinked = textImmediatelyAfterOFI.match(rekRegexLinked);
-
-            if (rekMatchLinked && rekMatchLinked[1] && rekMatchLinked[1].trim()) {
-                rekomendasiTextContent = rekMatchLinked[1].substring(0, 2000);
-                data.rekomendasiNdSvpIa = parseListFromString(rekomendasiTextContent);
-                rekomendasiLinkedToOFI = true;
-            } else {
-                 console.log("[content.js] Linked Rekomendasi not found immediately after OFI block.");
-            }
+            console.log("[content.js] OFI section identified by primary regex. Raw:", ofiTextContent.substring(0,100), "Parsed:", data.temuanNdSvpIa);
         } else {
-            console.log("[content.js] OFI section not clearly identified by primary regex.");
-        }
-
-        let isTemuanStillDefault = (Array.isArray(data.temuanNdSvpIa) && data.temuanNdSvpIa.length === 1 && data.temuanNdSvpIa[0] === "Data belum ditemukan");
-        if (isTemuanStillDefault && !ofiTextContent) {
-            const temuanFallbackKeywords = ["temuan", "temuan audit", "hasil pemeriksaan"];
-            const temuanFallbackRegex = new RegExp(`(?:${temuanFallbackKeywords.join('|')})\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:(?:\\n|^)\\s*(?:rekomendasi|kami menyampaikan rekomendasi))|\\n\\n[\\w\\s]{15,}|\Z)`, "i");
-            const temuanFallbackMatch = fullTextContent.match(temuanFallbackRegex);
+            console.log("[content.js] OFI section not clearly identified by primary regex. Attempting fallback.");
+            const ofiFallbackKeywords = ["temuan audit", "hasil pemeriksaan", "opportunities for improvement", "ofi", "temuan"];
+            // Simplified fallback regex, looking for keyword then colon/newline, then content until "rekomendasi" or "tindak lanjut"
+            const ofiFallbackRegex = new RegExp(`(?:${ofiFallbackKeywords.join('|')})\\s*[:\\n\\s.-]+([\\s\\S]*?)(?=(?:(?:\\n|^)\\s*(?:rekomendasi|kami menyampaikan rekomendasi|tindak lanjut|action plan|permasalahan di atas))|\\n\\n[\\w\\s]{10,}|\\Z)`, "i");
+            const temuanFallbackMatch = fullTextContent.match(ofiFallbackRegex);
             if (temuanFallbackMatch && temuanFallbackMatch[1] && temuanFallbackMatch[1].trim()) {
-                ofiTextContent = temuanFallbackMatch[1].substring(0, 2000);
+                ofiTextContent = temuanFallbackMatch[1].trim();
                 data.temuanNdSvpIa = parseListFromString(ofiTextContent);
-                console.log("[content.js] Found Temuan ND SVP IA using fallback search.");
+                console.log("[content.js] Found Temuan ND SVP IA using fallback search. Raw:", ofiTextContent.substring(0,100), "Parsed:", data.temuanNdSvpIa);
+            } else {
+                console.log("[content.js] OFI / Temuan section not found with any regex.");
+                data.temuanNdSvpIa = ["Data belum ditemukan"];
             }
         }
 
-        let isRekomendasiStillDefault = (Array.isArray(data.rekomendasiNdSvpIa) && data.rekomendasiNdSvpIa.length === 1 && data.rekomendasiNdSvpIa[0] === "Data belum ditemukan");
-        if (isRekomendasiStillDefault && !rekomendasiLinkedToOFI) {
-            const standaloneRekKeywords = ["rekomendasi", "kami menyampaikan rekomendasi", "saran perbaikan"];
-            const standaloneRekRegex = new RegExp(`(?:${standaloneRekKeywords.join('|')})\\s*[:\\n\\s.-]*([\\s\\S]*?)(?=(?:tindak\\s+lanjut|penutup|hormat kami|demikian|\\n\\n[\\w\\s]{15,}|\Z))`, "i");
-            const standaloneRekMatch = fullTextContent.match(standaloneRekRegex);
-            if (standaloneRekMatch && standaloneRekMatch[1] && standaloneRekMatch[1].trim()) {
-                rekomendasiTextContent = standaloneRekMatch[1].substring(0, 2000);
-                data.rekomendasiNdSvpIa = parseListFromString(rekomendasiTextContent);
-                console.log("[content.js] Found Rekomendasi ND SVP IA using standalone fallback search.");
+        // Rekomendasi Extraction (should run regardless of OFI found directly above it, but ensure it doesn't overlap)
+        // It's better to search for Rekomendasi independently from the full text or a relevant starting point.
+        const rekomendasiGlobalKeywords = ["Terhadap OFI tersebut, kami menyampaikan rekomendasi", "kami menyampaikan rekomendasi", "rekomendasi"];
+        // Look for a more specific start for recommendations.
+        const rekGlobalRegex = new RegExp(
+            `(?:${rekomendasiGlobalKeywords.join('|')})[^\\n]*?(?:DT agar:|manajemen agar:|sebagai berikut:|[:\\n\\s.-]+)` + // Consume rest of header line or up to colon
+            `([\\s\\S]*?)` + // Capture group 1: Rekomendasi items
+            `(?=\\n\\s*Permasalahan di atas telah kami klarifikasi|\\n\\s*Demikian disampaikan|\\n\\n[\\w\\s]{15,}|$)`, // Positive lookahead for end
+            "i"
+        );
+        const rekMatchGlobal = fullTextContent.match(rekGlobalRegex);
+
+        if (rekMatchGlobal && rekMatchGlobal[1] && rekMatchGlobal[1].trim().length > 0) {
+            rekomendasiTextContent = rekMatchGlobal[1].trim();
+            data.rekomendasiNdSvpIa = parseListFromString(rekomendasiTextContent);
+            console.log(`[content.js] Rekomendasi Extracted (len: ${rekomendasiTextContent.length}): "${rekomendasiTextContent.substring(0, 100)}..." Parsed:`, data.rekomendasiNdSvpIa);
+        } else {
+            console.log("[content.js] Rekomendasi section not clearly identified by global regex.");
+             // Keep existing fallback if truly needed, but global should be more robust
+            let isRekomendasiStillDefault = (Array.isArray(data.rekomendasiNdSvpIa) && data.rekomendasiNdSvpIa.length === 1 && data.rekomendasiNdSvpIa[0] === "Data belum ditemukan");
+            if (isRekomendasiStillDefault) { // Only run if not found by global
+                const standaloneRekKeywords = ["rekomendasi", "saran perbaikan"]; // Simplified
+                const standaloneRekRegex = new RegExp(`(?:${standaloneRekKeywords.join('|')})\\s*[:\\n\\s.-]+([\\s\\S]*?)(?=(?:tindak\\s+lanjut|penutup|hormat kami|demikian|permasalahan di atas)|\\n\\n[\\w\\s]{10,}|\\Z)`, "i");
+                const standaloneRekMatch = fullTextContent.match(standaloneRekRegex);
+                if (standaloneRekMatch && standaloneRekMatch[1] && standaloneRekMatch[1].trim()) {
+                    rekomendasiTextContent = standaloneRekMatch[1].trim();
+                    data.rekomendasiNdSvpIa = parseListFromString(rekomendasiTextContent);
+                    console.log("[content.js] Found Rekomendasi ND SVP IA using standalone fallback search. Parsed:", data.rekomendasiNdSvpIa);
+                } else {
+                    data.rekomendasiNdSvpIa = ["Data belum ditemukan"];
+                }
             }
         }
-      } catch (e) { console.warn("Error ekstraksi Temuan/Rekomendasi ND SVP IA:", e); }
+      } catch (e) { console.warn("Error ekstraksi Temuan/Rekomendasi ND SVP IA:", e); data.temuanNdSvpIa = data.temuanNdSvpIa || ["Data belum ditemukan"]; data.rekomendasiNdSvpIa = data.rekomendasiNdSvpIa || ["Data belum ditemukan"]; }
 
       // Nomor ND SVP IA (refined - already uses getTextFromTable, but if not found, try keywords)
       if (data.nomorNdSvpIa === "Data belum ditemukan") {
