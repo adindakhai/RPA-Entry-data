@@ -93,44 +93,72 @@ function parseListFromString(textBlock) {
     const listItems = [];
     let currentItem = '';
     const listItemRegex = /^\s*(?:[-*•–]|\d+[.)]|[a-zA-Z][.)])\s*(.*)/;
+    let firstRealLineChecked = false;
+    let looksLikeAList = false;
 
     for (const line of lines) {
         const trimmedLine = line.trim();
-        if (!trimmedLine) {
-            if (currentItem) {
-                // listItems.push(currentItem.trim()); // Decide if empty lines break items or are part of them
-                // currentItem = ''; // if empty line means new item.
+
+        if (!firstRealLineChecked && trimmedLine) {
+            if (listItemRegex.test(trimmedLine)) {
+                looksLikeAList = true;
             }
+            firstRealLineChecked = true;
+            // If it doesn't look like a list from the first real line, we might treat the whole block as one.
+            // However, a list could start later. So, we continue parsing but keep this flag.
+        }
+
+        if (!trimmedLine) {
+            // Optional: if empty lines should definitely break items.
+            // if (currentItem) {
+            //     listItems.push(currentItem.trim());
+            //     currentItem = '';
+            // }
             continue;
         }
 
         const match = trimmedLine.match(listItemRegex);
         if (match) {
-            if (currentItem) {
+            if (currentItem) { // If there was a previous item being built (e.g. multi-line non-list item, or previous list item)
                 listItems.push(currentItem.trim());
             }
-            currentItem = match[1] ? match[1].trim() : '';
-        } else {
-            if (currentItem) {
+            currentItem = match[1] ? match[1].trim() : ''; // Start new list item
+            looksLikeAList = true; // Reinforce that it looks like a list
+        } else { // Line does not start with a list marker
+            if (currentItem) { // If we are building an item, append this line to it
                 currentItem += (currentItem.endsWith('\n') ? '' : '\n') + trimmedLine;
             } else {
-                // Line is not part of a detected list, and no list has started.
-                // If we want to capture all non-empty lines when no list markers are found,
-                // this behavior is handled by the fallback after the loop.
+                // This is a line without a list marker, and no item is currently being built.
+                // This could be the first line of a block that isn't a list, or an orphan line.
+                // We'll let currentItem accumulate it. If a list marker appears later, this will be pushed.
+                // If no list markers appear at all, the fallback logic will handle it.
+                currentItem = trimmedLine;
             }
         }
     }
 
-    if (currentItem) {
+    if (currentItem) { // Push any remaining accumulated item
         listItems.push(currentItem.trim());
     }
 
-    if (listItems.length === 0 && textBlock.trim()) {
-        // No list markers found, but text exists. Return non-empty lines as items.
-        return textBlock.split('\n').map(l => l.trim()).filter(l => l && l !== "Data belum ditemukan" && l.length > 0);
+    // If, after all parsing, we found list-like structures OR if the original textBlock had newlines
+    // suggesting multiple distinct paragraphs that the user might want separated:
+    if (looksLikeAList || (listItems.length > 0 && listItems.some(item => item.includes('\n')))) {
+        // Standard return: filter out any empty strings that might have resulted from trimming.
+        const nonEmptyItems = listItems.filter(item => item && item !== "Data belum ditemukan");
+        return nonEmptyItems.length > 0 ? nonEmptyItems : ["Data belum ditemukan"];
     }
 
-    return listItems.length > 0 ? listItems : ["Data belum ditemukan"];
+    // Fallback: If it never really looked like a list (no markers found)
+    // and the parsing resulted in zero or one item that is essentially the whole block,
+    // or if the textBlock is just a single line of text without newlines.
+    // In this case, we return the entire textBlock as a single item, trimmed.
+    // This is to preserve long paragraphs that are not meant to be lists.
+    if (textBlock.trim()) {
+        return [textBlock.trim()];
+    }
+
+    return ["Data belum ditemukan"]; // Should not be reached if textBlock has content
 }
 
 
