@@ -117,20 +117,26 @@ function fillFormFields(data) {
     setFieldValue('input[name="Matriks_Program"]', data.Matriks_Program, 'Matriks Program'); // Also .inputMatriks_Program
     setFieldValue('#Matriks_Tgl_Entry', data.Matriks_Tgl, 'Tanggal Matriks', 'date');
 
-    setFieldValue('input[name="ND_SVP_IA_Nomor"]', data.ND_SVP_IA_Nomor, 'Nomor ND SVP IA'); // Also .inputND_SVP_IA_Nomor
-    setFieldValue('input[name="Desc_ND_SVP_IA"]', data.Desc_ND_SVP_IA, 'Deskripsi ND SVP IA'); // Also .inputDesc_ND_SVP_IA
+    // --- ND SVP IA Fields ---
+    // USER: Please verify these selectors if fields are not filling. Check console for "Element ... not found" errors.
+    setFieldValue('input[name="ND_SVP_IA_Nomor"]', data.ND_SVP_IA_Nomor, 'Nomor ND SVP IA'); // Also .inputND_SVP_IA_Nomor. Assumed to be an input field.
+
+    // Changed selector to be more general for Desc_ND_SVP_IA (input or textarea) and specified type as textarea.
+    setFieldValue('[name="Desc_ND_SVP_IA"]', data.Desc_ND_SVP_IA, 'Deskripsi ND SVP IA', 'textarea'); // Also .inputDesc_ND_SVP_IA.
+
     setFieldValue('#ND_SVP_IA_Tanggal_Entry', data.ND_SVP_IA_Tanggal, 'Tanggal ND SVP IA', 'date');
+
+    // USER: Verify ID #inputND_SVP_IA_Temuan is correct for Temuan ND SVP IA textarea.
     setFieldValue('#inputND_SVP_IA_Temuan', data.ND_SVP_IA_Temuan, 'Temuan ND SVP IA', 'textarea');
 
-    // Rekomendasi ND SVP IA - User reports ID is '#inputND_SVP_IA_Temuan' (same as Temuan ND SVP IA)
-    // This is problematic. DO NOT FILL unless a unique selector is provided and confirmed.
-    // For now, we log if data for it exists, and await user feedback for the correct selector.
-    // UPDATE: User has provided the selector: #inputND_SVP_IA_Rekomendasi
+    // USER: Verify ID #inputND_SVP_IA_Rekomendasi is correct for Rekomendasi ND SVP IA textarea.
+    // Previous notes indicated potential issues with this selector.
     if (data.ND_SVP_IA_Rekomendasi && data.ND_SVP_IA_Rekomendasi !== "Data belum ditemukan") {
         setFieldValue('#inputND_SVP_IA_Rekomendasi', data.ND_SVP_IA_Rekomendasi, 'Rekomendasi ND SVP IA', 'textarea');
     } else if (data.ND_SVP_IA_Rekomendasi === "") { // Handle intentional clearing
         setFieldValue('#inputND_SVP_IA_Rekomendasi', "", 'Rekomendasi ND SVP IA', 'textarea');
     }
+    // --- End ND SVP IA Fields ---
 
 
     setFieldValue('input[name="ND_Dirut_Nomor"]', data.ND_Dirut_Nomor, 'Nomor ND Dirut'); // Also .inputND_Dirut_Nomor
