@@ -300,7 +300,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             }
 
             // Using waitForElement to ensure the tab trigger is in the DOM
-            const tabTriggerSelector = 'a[href="#pills-profile"]';
+            const tabTriggerSelector = '#pills-profile-tab'; // Corrected selector to use ID, based on user inspection
             console.log(`[ia_telkom_filler.js] Waiting for tab trigger "${tabTriggerSelector}" to appear in DOM...`);
 
             waitForElement(tabTriggerSelector, 5000) // Wait up to 5 seconds for the tab trigger
