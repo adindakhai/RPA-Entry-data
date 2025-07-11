@@ -136,6 +136,145 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 extractedData.rekomendasiNdSvpIa = parseListFromString(rekomendasiTextContent);
             }
 
+            // Ekstraksi Nomor SPK
+            // Format contoh: Surat Perintah Kerja (SPK) Nomor C.Tel.AMSXX/0XX/K/PW000/IA-X0/20XX/Rhs
+            // Cari keyword "Surat Perintah Kerja (SPK) Nomor" atau "SPK Nomor"
+            // Lalu ambil sisanya di baris itu atau sampai pattern nomornya selesai.
+            try {
+                const spkRegex = /(?:Surat Perintah Kerja \(SPK\) Nomor|SPK Nomor)\s*([A-Za-z0-9./-]+(?:BAPP|BAST|ADDENDUM|AMANDEMEN)?)/i;
+                const spkMatch = bodyText.match(spkRegex);
+                if (spkMatch && spkMatch[1]) {
+                    extractedData.noSPK = spkMatch[1].trim();
+                } else {
+                    // Fallback if the primary regex doesn't match, try a simpler "SPK" keyword
+                    // and getTextBetweenKeywords to get the line. This is less precise.
+                    const spkLineText = getTextBetweenKeywords(bodyText, ["SPK"], ["\n", "tanggal", "perihal"]);
+                    if (spkLineText && /[A-Za-z0-9./-]+/.test(spkLineText)) { // Basic check if it looks like a number
+                         // Further attempt to clean up if it's just a line with "SPK" and the number.
+                        const simplerSpkMatch = spkLineText.match(/([A-Za-z0-9./-]+(?:BAPP|BAST|ADDENDUM|AMANDEMEN)?)/);
+                        if (simplerSpkMatch && simplerSpkMatch[1]) {
+                            extractedData.noSPK = simplerSpkMatch[1].trim();
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Asisten NDE: Error saat ekstraksi Nomor SPK:", e);
+            }
+
+            // Ekstraksi Nomor ND SVP IA
+            // Format contoh: C.Tel.XXX/UM 500/HCS-A1010000/2025. Biasanya di Kop Surat.
+            // Mungkin didahului "Nomor :"
+            try {
+                const ndSvpIaRegex1 = /(?:Nomor|No\.)\s*[:\-]?\s*(C\.Tel\.[A-Z0-9./\s-]+)/i;
+                let ndMatch = bodyText.match(ndSvpIaRegex1);
+                if (ndMatch && ndMatch[1]) {
+                    extractedData.nomorNdSvpIa = ndMatch[1].trim().replace(/\s+/g, ''); // Remove spaces within the number
+                } else {
+                    // Fallback: Look for the pattern C.Tel.XXX/UM... directly, common in headers
+                    const ndSvpIaRegex2 = /\b(C\.Tel\.[A-Z0-9./-]+\/[A-Z0-9./-]+\/[A-Z0-9./-]+\/\d{4})\b/i;
+                    ndMatch = bodyText.match(ndSvpIaRegex2);
+                    if (ndMatch && ndMatch[1]) {
+                        extractedData.nomorNdSvpIa = ndMatch[1].trim();
+                    }
+                }
+            } catch (e) {
+                console.error("Asisten NDE: Error saat ekstraksi Nomor ND SVP IA:", e);
+            }
+
+            // Ekstraksi Deskripsi ND SVP IA (Perihal)
+            try {
+                const perihalStartKeywords = ["Perihal:", "Perihal :", "Hal :", "Hal:"];
+                // Perihal is usually a single line. End before the main content starts.
+                // Common follow-ups: Kepada Yth, Dengan hormat, Menunjuk, line breaks.
+                // For a simple single-line perihal:
+                const perihalEndKeywords = ["\n", "Kepada Yth", "Dengan hormat", "Menunjuk"];
+                const perihalText = getTextBetweenKeywords(bodyText, perihalStartKeywords, perihalEndKeywords);
+                if (perihalText) {
+                    extractedData.deskripsiNdSvpIa = perihalText.trim();
+                }
+            } catch (e) {
+                console.error("Asisten NDE: Error saat ekstraksi Deskripsi ND SVP IA:", e);
+            }
+
+            // Ekstraksi Tanggal ND SVP IA
+            // "Tanggal diisi tanggal surat (biasanya ada di akhir)"
+            // "kalo tanggal ya cari aja yg formatnya kayak tanggal, semua format tanggal"
+            try {
+                const dateRegexes = [
+                    /\b(0?[1-9]|[12][0-9]|3[01])\s+(Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember)\s+(\d{4})\b/gi, // DD MMMM YYYY
+                    /\b(0?[1-9]|[12][0-9]|3[01])[-/](0?[1-9]|1[0-2])[-/](\d{4})\b/gi, // DD-MM-YYYY or DD/MM/YYYY
+                    /\b(Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember)\s+(0?[1-9]|[12][0-9]|3[01]),?\s+(\d{4})\b/gi // MMMM DD, YYYY
+                ];
+
+                let lastFoundDate = null;
+                let lastFoundDateIndex = -1;
+
+                for (const regex of dateRegexes) {
+                    let match;
+                    while ((match = regex.exec(bodyText)) !== null) {
+                        if (match.index > lastFoundDateIndex) {
+                            lastFoundDateIndex = match.index;
+                            // Reconstruct the date from match groups to ensure consistent format if possible,
+                            // or just use match[0] which is the full matched string.
+                            // For simplicity here, using match[0] as popup.js has a formatter.
+                            lastFoundDate = match[0];
+                        }
+                    }
+                }
+                if (lastFoundDate) {
+                    // Normalize common month names for consistency if needed, though popup.js handles some.
+                    // Example: Agustus -> Agustus, Agt -> Agustus (not done here, popup.js handles specific Indonesian month names)
+                    extractedData.tanggalNdSvpIa = lastFoundDate.trim();
+                }
+            } catch (e) {
+                console.error("Asisten NDE: Error saat ekstraksi Tanggal ND SVP IA:", e);
+            }
+
+            // Helper function to extract a number following a keyword
+            function extractNumberAfterKeyword(text, keyword, searchWindowChars = 50) {
+                const lowerText = text.toLowerCase();
+                const keywordLower = keyword.toLowerCase();
+                let keywordIndex = lowerText.indexOf(keywordLower);
+
+                if (keywordIndex === -1) return 0; // Keyword not found
+
+                const searchStartIndex = keywordIndex + keyword.length;
+                const searchArea = text.substring(searchStartIndex, searchStartIndex + searchWindowChars);
+
+                // Regex to find the first number, possibly after colon, space, or in parentheses
+                const numberMatch = searchArea.match(/(?:[:\(\s-]*?)(\d+)/);
+                if (numberMatch && numberMatch[1]) {
+                    return parseInt(numberMatch[1], 10);
+                }
+                return 0; // No number found in search area
+            }
+
+            // Ekstraksi MTL Closed, Reschedule, Overdue, OnSchedule
+            try {
+                extractedData.mtlClosed = extractNumberAfterKeyword(bodyText, "closed");
+                extractedData.reschedule = extractNumberAfterKeyword(bodyText, "Reschedule");
+                extractedData.overdue = extractNumberAfterKeyword(bodyText, "Overdue");
+                extractedData.onSchedule = extractNumberAfterKeyword(bodyText, "OnSchedule");
+            } catch (e) {
+                console.error("Asisten NDE: Error saat ekstraksi data numerik (MTL Closed, etc.):", e);
+            }
+
+            // Menentukan Status berdasarkan nilai Reschedule, OnSchedule, Overdue
+            // Asumsi: Jika salah satu dari ini > 0, itu menentukan status. Prioritas: Reschedule > OnSchedule > Overdue.
+            try {
+                if (extractedData.reschedule > 0) {
+                    extractedData.status = "Reschedule";
+                } else if (extractedData.onSchedule > 0) {
+                    extractedData.status = "OnSchedule";
+                } else if (extractedData.overdue > 0) {
+                    extractedData.status = "Overdue";
+                }
+                // Else, status remains "Data belum ditemukan" or its default from initialization
+            } catch (e) {
+                console.error("Asisten NDE: Error saat menentukan Status:", e);
+            }
+
+
             // Anda bisa menambahkan ekstraksi untuk field lain di sini dengan pola yang sama
             // Contoh:
             // const spkStartKeywords = ["surat perintah kerja", "spk"];
