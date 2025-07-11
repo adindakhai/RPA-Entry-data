@@ -13,6 +13,7 @@
     "<all_urls>"
   ],
   "action": {
+    "default_popup": "popup.html",
     "default_icon": {
       "128": "icons/icon128.png"
     }
@@ -34,11 +35,7 @@
         "file:///*IA Telkom.mhtml"
       ],
       "js": [
-        "ia_telkom_filler.js",
-        "custom_popup_injector.js"
-      ],
-      "css": [
-        "custom_popup.css"
+        "ia_telkom_filler.js"
       ],
       "run_at": "document_idle"
     }
@@ -49,11 +46,10 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "MOCKUP/mtl_mockup.html",
-        "custom_popup.css"
+        "MOCKUP/mtl_mockup.html"
       ],
       "matches": [
-        "file:///*"
+        "<all_urls>"
       ]
     }
   ]

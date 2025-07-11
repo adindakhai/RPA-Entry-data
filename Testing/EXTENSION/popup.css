@@ -1,4 +1,4 @@
-/* Additional styles for better cross-browser compatibility and responsive design */
+/* popup.css - Final */
 
 /* Ensure consistent font rendering */
 * {
@@ -108,49 +108,50 @@ textarea:focus-visible {
     }
 }
 
-/* Dark mode support (if needed in future) */
-@media (prefers-color-scheme: dark) {
-    /* Dark mode styles can be added here */
+/* ================================================================== */
+/* === FORM FIELD UNIFORMITY === */
+/* ================================================================== */
+
+/* Apply box-sizing to all relevant input types for consistent sizing */
+input[type="text"],
+input[type="date"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+textarea {
+    box-sizing: border-box;
 }
 
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-    .border-slate-200 {
-        border-color: #000;
-    }
-    
-    .text-slate-500 {
-        color: #000;
-    }
-    
-    .bg-slate-50 {
-        background-color: #fff;
-    }
+/* Set a uniform height for single-line input fields */
+input[type="text"],
+input[type="date"],
+input[type="number"],
+input[type="email"],
+input[type="password"] {
+    height: 2.5rem; /* Approx 40px, adjust if necessary */
+    /* Vertical padding is handled by Tailwind's py-2,
+       and box-sizing: border-box ensures it's included in the height. */
 }
 
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-    .transition-all,
-    .btn-hover:hover,
-    .animate-spin {
-        transition: none;
-        animation: none;
-        transform: none;
-    }
+/* Base styles for all textareas */
+textarea {
+    /* Ensure consistent box model and basic properties */
+    box-sizing: border-box;
+    width: 100%; /* Usually handled by w-full in HTML, but good for a base */
+    max-height: 150px; /* Maximum expansion limit */
+    overflow-y: auto; /* Allow scrolling if content exceeds max-height or current height */
+    min-height: 2.5rem; /* Default minimum height, same as single-line inputs */
+                       /* This also serves as the default height if not overridden by ID */
+    /* The `auto-resize-textarea` class/JS is expected to adjust height dynamically
+       from this min-height up to max-height. */
 }
 
-/* Print styles */
-@media print {
-    body {
-        width: 100%;
-        background: white;
-    }
-    
-    .bg-gradient-to-br {
-        background: white;
-    }
-    
-    button {
-        display: none;
-    }
-} 
+/* Specific initial heights for textareas intended for longer content */
+#popup-nd-svp-ia-deskripsi,
+#popup-nd-svp-ia-temuan,
+#popup-nd-svp-ia-rekomendasi,
+#popup-nd-dirut-deskripsi,
+#popup-nd-dirut-temuan,
+#popup-nd-dirut-rekomendasi {
+    height: 6rem; /* Approx 96px, for ~3-4 lines of initial visible text */
+}

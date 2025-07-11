@@ -16,6 +16,52 @@ function isCorrectPage() {
     return false;
 }
 
+// NEW: Function to wait for an element to be visible
+function waitForElementVisibility(selector, parentNodeToObserve, timeoutDuration = 7000) {
+    return new Promise((resolve, reject) => {
+        const isVisible = (el) => {
+            if (!el) return false;
+            // Check if style is 'display: none'
+            const style = window.getComputedStyle(el);
+            if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+                return false;
+            }
+            // Check if element is practically visible (has width/height and is in the offset tree)
+            return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length) && el.offsetParent !== null;
+        };
+
+        let element = document.querySelector(selector);
+        if (element && isVisible(element)) {
+            resolve(element);
+            return;
+        }
+
+        let observer;
+        const timeout = setTimeout(() => {
+            if (observer) observer.disconnect();
+            reject(new Error(`Timeout: Element "${selector}" did not become visible within ${timeoutDuration}ms.`));
+        }, timeoutDuration);
+
+        observer = new MutationObserver((mutationsList, obs) => {
+            element = document.querySelector(selector);
+            if (element && isVisible(element)) {
+                clearTimeout(timeout);
+                obs.disconnect();
+                resolve(element);
+            }
+        });
+
+        const observeTargetNode = parentNodeToObserve || document.body; // Fallback to document.body if no specific parent
+        observer.observe(observeTargetNode, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['style', 'class'] // Observe changes to style and class attributes
+        });
+    });
+}
+
+
 // Function to fill form fields
 function fillFormFields(data) {
     console.log("[ia_telkom_filler.js] Received data to fill:", data);
@@ -117,20 +163,26 @@ function fillFormFields(data) {
     setFieldValue('input[name="Matriks_Program"]', data.Matriks_Program, 'Matriks Program'); // Also .inputMatriks_Program
     setFieldValue('#Matriks_Tgl_Entry', data.Matriks_Tgl, 'Tanggal Matriks', 'date');
 
-    setFieldValue('input[name="ND_SVP_IA_Nomor"]', data.ND_SVP_IA_Nomor, 'Nomor ND SVP IA'); // Also .inputND_SVP_IA_Nomor
-    setFieldValue('input[name="Desc_ND_SVP_IA"]', data.Desc_ND_SVP_IA, 'Deskripsi ND SVP IA'); // Also .inputDesc_ND_SVP_IA
+    // --- ND SVP IA Fields ---
+    // USER: Please verify these selectors if fields are not filling. Check console for "Element ... not found" errors.
+    setFieldValue('input[name="ND_SVP_IA_Nomor"]', data.ND_SVP_IA_Nomor, 'Nomor ND SVP IA'); // Also .inputND_SVP_IA_Nomor. Assumed to be an input field.
+
+    // Changed selector to be more general for Desc_ND_SVP_IA (input or textarea) and specified type as textarea.
+    setFieldValue('[name="Desc_ND_SVP_IA"]', data.Desc_ND_SVP_IA, 'Deskripsi ND SVP IA', 'textarea'); // Also .inputDesc_ND_SVP_IA.
+
     setFieldValue('#ND_SVP_IA_Tanggal_Entry', data.ND_SVP_IA_Tanggal, 'Tanggal ND SVP IA', 'date');
+
+    // USER: Verify ID #inputND_SVP_IA_Temuan is correct for Temuan ND SVP IA textarea.
     setFieldValue('#inputND_SVP_IA_Temuan', data.ND_SVP_IA_Temuan, 'Temuan ND SVP IA', 'textarea');
 
-    // Rekomendasi ND SVP IA - User reports ID is '#inputND_SVP_IA_Temuan' (same as Temuan ND SVP IA)
-    // This is problematic. DO NOT FILL unless a unique selector is provided and confirmed.
-    // For now, we log if data for it exists, and await user feedback for the correct selector.
-    // UPDATE: User has provided the selector: #inputND_SVP_IA_Rekomendasi
+    // USER: Verify ID #inputND_SVP_IA_Rekomendasi is correct for Rekomendasi ND SVP IA textarea.
+    // Previous notes indicated potential issues with this selector.
     if (data.ND_SVP_IA_Rekomendasi && data.ND_SVP_IA_Rekomendasi !== "Data belum ditemukan") {
         setFieldValue('#inputND_SVP_IA_Rekomendasi', data.ND_SVP_IA_Rekomendasi, 'Rekomendasi ND SVP IA', 'textarea');
     } else if (data.ND_SVP_IA_Rekomendasi === "") { // Handle intentional clearing
         setFieldValue('#inputND_SVP_IA_Rekomendasi', "", 'Rekomendasi ND SVP IA', 'textarea');
     }
+    // --- End ND SVP IA Fields ---
 
 
     setFieldValue('input[name="ND_Dirut_Nomor"]', data.ND_Dirut_Nomor, 'Nomor ND Dirut'); // Also .inputND_Dirut_Nomor
@@ -191,18 +243,45 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 console.log("[ia_telkom_filler.js] #ModalAddSPK appears to be already open or visible.");
             }
 
-            // Wait a short moment for the modal to potentially open/render if it wasn't already.
-            // This is a common requirement for SPAs or pages with dynamic content.
+            // NEW: Wait for a key element within the modal to become visible using MutationObserver
+            // Choose a reliable selector for an element that should be visible when the form is ready.
+            // Example: one of the problematic fields or its direct container.
+            // Let's use 'input[name="ND_SVP_IA_Nomor"]' as an example target to wait for.
+            // The parentNodeToObserve could be modalElement.querySelector('.modal-body .container')
+
+            const modalBodyContainer = modalElement ? modalElement.querySelector('.modal-body .container') : null;
+            if (!modalBodyContainer) {
+                console.error("[ia_telkom_filler.js] Modal body container (.modal-body .container) not found within #ModalAddSPK.");
+                sendResponse({ success: false, message: "Modal structure incomplete, .modal-body .container missing." });
+                return true; // Keep channel open if we need to send async response
+            }
+
+            // Short delay to ensure modal structure is somewhat stable before attaching observer
             setTimeout(() => {
-                const modalForm = document.getElementById('ModalAddSPK');
-                if (!modalForm || (modalForm.style.display !== 'block' && !modalForm.classList.contains('in'))) {
-                    console.error("[ia_telkom_filler.js] #ModalAddSPK is not visible after attempting to open.");
-                    sendResponse({ success: false, message: "Could not open or find the new entry modal (#ModalAddSPK)." });
-                    return;
+                // Check if modal is truly visible before starting to wait for inner elements
+                if (!(modalElement.classList.contains('in') || modalElement.style.display === 'block')) {
+                     console.error("[ia_telkom_filler.js] #ModalAddSPK is not actually visible before waiting for content.");
+                     sendResponse({ success: false, message: "Modal closed or became hidden before content could be verified." });
+                     return;
                 }
-                const result = fillFormFields(request.data);
-                sendResponse(result);
-            }, 1000); // Adjust timeout as needed, or implement MutationObserver for robustness
+
+                console.log("[ia_telkom_filler.js] Modal #ModalAddSPK is open. Waiting for key field 'input[name=\"ND_SVP_IA_Nomor\"]' to become visible...");
+                waitForElementVisibility('input[name="ND_SVP_IA_Nomor"]', modalBodyContainer, 7000) // Wait up to 7 seconds
+                    .then(visibleElement => {
+                        console.log(`[ia_telkom_filler.js] Key field '${visibleElement.name}' is now visible. Proceeding to fill form.`);
+                        const result = fillFormFields(request.data);
+                        sendResponse(result);
+                    })
+                    .catch(error => {
+                        console.error("[ia_telkom_filler.js] Error waiting for element visibility:", error.message);
+                        // Attempt to fill anyway? Or send specific error?
+                        // For now, let's try to fill, as some fields might be usable.
+                        // User logs showed elements were found but not visible.
+                        console.warn("[ia_telkom_filler.js] Proceeding to attempt form fill despite visibility wait error/timeout for some elements.");
+                        const result = fillFormFields(request.data); // Try filling anyway
+                        sendResponse(result); // Send result, which might contain errors if fields still not found/fillable
+                    });
+            }, 200); // Short delay (200ms) for modal to be in DOM, then start observing.
 
         } else {
             console.error("[ia_telkom_filler.js] 'Input Data dengan SPK Baru' button not found.");
