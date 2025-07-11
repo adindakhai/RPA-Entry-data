@@ -16,7 +16,28 @@ function isCorrectPage() {
     return false;
 }
 
-// NEW: Function to wait for an element to be visible
+// NEW: Polling function to wait for an element to exist in the DOM
+function waitForElement(selector, timeout = 5000) {
+    return new Promise((resolve, reject) => {
+        const interval = 100; // Check every 100ms
+        let elapsed = 0;
+
+        const checkExist = setInterval(() => {
+            const el = document.querySelector(selector);
+            if (el) {
+                clearInterval(checkExist);
+                resolve(el);
+            } else if (elapsed >= timeout) {
+                clearInterval(checkExist);
+                reject(new Error(`Timeout: Element "${selector}" not found within ${timeout}ms.`));
+            }
+            elapsed += interval;
+        }, interval);
+    });
+}
+
+
+// OLD: Function to wait for an element to be visible (REPLACED by waitForElement for this use case, but kept for reference/other uses if needed)
 function waitForElementVisibility(selector, parentNodeToObserve, timeoutDuration = 7000) {
     return new Promise((resolve, reject) => {
         const isVisible = (el) => {
@@ -278,23 +299,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 console.log("[ia_telkom_filler.js] #ModalAddSPK appears to be already open or visible.");
             }
 
-            // Reverted to fixed timeout.
-            // Wait a short moment for the modal to potentially open/render if it wasn't already.
-            setTimeout(() => {
-                const modalForm = document.getElementById('ModalAddSPK'); // Re-check modal existence/visibility
-                if (!modalForm || !(modalForm.classList.contains('in') || modalForm.style.display === 'block')) {
-                    console.error("[ia_telkom_filler.js] #ModalAddSPK is not visible after attempting to open or has disappeared.");
-                    sendResponse({ success: false, message: "Could not open or find the new entry modal (#ModalAddSPK) before filling." });
-                    return;
-                }
-                console.log("[ia_telkom_filler.js] Modal #ModalAddSPK is open. Checking for Detail ND SVP IA tab trigger...");
+            // Using waitForElement to ensure the tab trigger is in the DOM
+            const tabTriggerSelector = 'a[href="#pills-profile"]';
+            console.log(`[ia_telkom_filler.js] Waiting for tab trigger "${tabTriggerSelector}" to appear in DOM...`);
 
-                const tabTriggerSelector = 'a[href="#pills-profile"]'; // Corrected selector based on user inspection
-                const tabTrigger = document.querySelector(tabTriggerSelector);
-
-                if (tabTrigger) {
+            waitForElement(tabTriggerSelector, 5000) // Wait up to 5 seconds for the tab trigger
+                .then(tabTrigger => {
+                    console.log(`[ia_telkom_filler.js] Found tab trigger: ${tabTriggerSelector}. Checking if active and clicking if necessary...`);
                     // Check if the tab is already active to avoid unnecessary click and delay
-                    // Bootstrap 5 uses 'active' class on the link, target pane might also have 'active show'
                     const targetPaneId = tabTrigger.getAttribute('href'); // Should be '#tabDetailNDIA'
                     const targetPane = targetPaneId ? document.querySelector(targetPaneId) : null;
 
@@ -311,12 +323,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                             sendResponse(result);
                         }, 700); // Delay for tab content to render
                     }
-                } else {
-                    console.warn(`[ia_telkom_filler.js] Detail ND SVP IA tab trigger (${tabTriggerSelector}) not found. Proceeding without tab switch.`);
+                })
+                .catch(error => {
+                    console.warn(`[ia_telkom_filler.js] ${error.message}. Proceeding without tab switch.`);
+                    // Fallback: attempt to fill the form directly if tab trigger isn't found after polling
                     const result = fillFormFields(request.data);
                     sendResponse(result);
-                }
-            }, 2500); // Outer fixed delay of 2.5 seconds to ensure modal is generally ready
+                });
 
         } else {
             console.error("[ia_telkom_filler.js] 'Input Data dengan SPK Baru' button not found.");
