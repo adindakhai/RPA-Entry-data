@@ -287,10 +287,36 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     sendResponse({ success: false, message: "Could not open or find the new entry modal (#ModalAddSPK) before filling." });
                     return;
                 }
-                console.log("[ia_telkom_filler.js] Modal #ModalAddSPK is open. Proceeding to fill form after delay.");
-                const result = fillFormFields(request.data);
-                sendResponse(result);
-            }, 2500); // Fixed delay of 2.5 seconds
+                console.log("[ia_telkom_filler.js] Modal #ModalAddSPK is open. Checking for Detail ND SVP IA tab trigger...");
+
+                const tabTriggerSelector = 'a[href="#tabDetailNDIA"]';
+                const tabTrigger = document.querySelector(tabTriggerSelector);
+
+                if (tabTrigger) {
+                    // Check if the tab is already active to avoid unnecessary click and delay
+                    // Bootstrap 5 uses 'active' class on the link, target pane might also have 'active show'
+                    const targetPaneId = tabTrigger.getAttribute('href'); // Should be '#tabDetailNDIA'
+                    const targetPane = targetPaneId ? document.querySelector(targetPaneId) : null;
+
+                    if (tabTrigger.classList.contains('active') && targetPane && targetPane.classList.contains('active')) {
+                        console.log("[ia_telkom_filler.js] Detail ND SVP IA tab is already active. Proceeding to fill form.");
+                        const result = fillFormFields(request.data);
+                        sendResponse(result);
+                    } else {
+                        console.log(`[ia_telkom_filler.js] Clicking Detail ND SVP IA tab trigger: ${tabTriggerSelector}`);
+                        tabTrigger.click();
+                        setTimeout(() => {
+                            console.log("[ia_telkom_filler.js] Proceeding to fill form after tab activation and 700ms delay.");
+                            const result = fillFormFields(request.data);
+                            sendResponse(result);
+                        }, 700); // Delay for tab content to render
+                    }
+                } else {
+                    console.warn(`[ia_telkom_filler.js] Detail ND SVP IA tab trigger (${tabTriggerSelector}) not found. Proceeding without tab switch.`);
+                    const result = fillFormFields(request.data);
+                    sendResponse(result);
+                }
+            }, 2500); // Outer fixed delay of 2.5 seconds to ensure modal is generally ready
 
         } else {
             console.error("[ia_telkom_filler.js] 'Input Data dengan SPK Baru' button not found.");
