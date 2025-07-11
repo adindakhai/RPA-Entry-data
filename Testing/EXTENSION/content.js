@@ -251,7 +251,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
             // Ekstraksi MTL Closed, Reschedule, Overdue, OnSchedule
             try {
+                // Attempt to extract a specific number associated with "closed"
                 extractedData.mtlClosed = extractNumberAfterKeyword(bodyText, "closed");
+
+                // If no specific number was found (mtlClosed is 0 from helper)
+                // but the word "closed" exists, set mtlClosed to 1.
+                if (extractedData.mtlClosed === 0 && bodyText.toLowerCase().includes("closed")) {
+                    extractedData.mtlClosed = 1;
+                }
+
                 extractedData.reschedule = extractNumberAfterKeyword(bodyText, "Reschedule");
                 extractedData.overdue = extractNumberAfterKeyword(bodyText, "Overdue");
                 extractedData.onSchedule = extractNumberAfterKeyword(bodyText, "OnSchedule");
