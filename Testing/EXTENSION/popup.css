@@ -133,19 +133,25 @@ input[type="password"] {
        and box-sizing: border-box ensures it's included in the height. */
 }
 
-/* Apply consistent initial height and existing textarea rules */
+/* Base styles for all textareas */
 textarea {
-    /* Batasi tinggi maksimum agar tidak melebihi jendela popup */
-    max-height: 150px; 
-    
-    /* Tampilkan scrollbar vertikal jika kontennya lebih panjang dari max-height */
-    overflow-y: auto; 
+    /* Ensure consistent box model and basic properties */
+    box-sizing: border-box;
+    width: 100%; /* Usually handled by w-full in HTML, but good for a base */
+    max-height: 150px; /* Maximum expansion limit */
+    overflow-y: auto; /* Allow scrolling if content exceeds max-height or current height */
+    min-height: 2.5rem; /* Default minimum height, same as single-line inputs */
+                       /* This also serves as the default height if not overridden by ID */
+    /* The `auto-resize-textarea` class/JS is expected to adjust height dynamically
+       from this min-height up to max-height. */
+}
 
-    /* Opsional: pastikan ukuran lebar tetap konsisten */
-    width: 100%; /* Already applied by w-full class in HTML but good for explicitness */
-
-    /* New: Set initial height to match other inputs */
-    height: 2.5rem; /* Approx 40px, adjust if necessary */
-    /* min-height could also be used if JS resizer needs to shrink it,
-       but for initial visual consistency, height is fine. */
+/* Specific initial heights for textareas intended for longer content */
+#popup-nd-svp-ia-deskripsi,
+#popup-nd-svp-ia-temuan,
+#popup-nd-svp-ia-rekomendasi,
+#popup-nd-dirut-deskripsi,
+#popup-nd-dirut-temuan,
+#popup-nd-dirut-rekomendasi {
+    height: 6rem; /* Approx 96px, for ~3-4 lines of initial visible text */
 }
