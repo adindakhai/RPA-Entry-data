@@ -1,4 +1,4 @@
-/* Additional styles for better cross-browser compatibility and responsive design */
+/* popup.css - Final */
 
 /* Ensure consistent font rendering */
 * {
@@ -108,49 +108,17 @@ textarea:focus-visible {
     }
 }
 
-/* Dark mode support (if needed in future) */
-@media (prefers-color-scheme: dark) {
-    /* Dark mode styles can be added here */
-}
+/* ================================================================== */
+/* === TAMBAHAN KRUSIAL UNTUK MEMPERBAIKI MASALAH TAMPILAN TEXTAREA === */
+/* ================================================================== */
+textarea {
+    /* Batasi tinggi maksimum agar tidak melebihi jendela popup */
+    max-height: 150px; 
+    
+    /* Tampilkan scrollbar vertikal jika kontennya lebih panjang dari max-height */
+    overflow-y: auto; 
 
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-    .border-slate-200 {
-        border-color: #000;
-    }
-    
-    .text-slate-500 {
-        color: #000;
-    }
-    
-    .bg-slate-50 {
-        background-color: #fff;
-    }
+    /* Opsional: pastikan ukuran lebar tetap konsisten */
+    width: 100%;
+    box-sizing: border-box; /* agar padding tidak menambah lebar */
 }
-
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-    .transition-all,
-    .btn-hover:hover,
-    .animate-spin {
-        transition: none;
-        animation: none;
-        transform: none;
-    }
-}
-
-/* Print styles */
-@media print {
-    body {
-        width: 100%;
-        background: white;
-    }
-    
-    .bg-gradient-to-br {
-        background: white;
-    }
-    
-    button {
-        display: none;
-    }
-} 
