@@ -301,9 +301,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
             // Using waitForElement to ensure the tab trigger is in the DOM
             const tabTriggerSelector = '#pills-profile-tab'; // Corrected selector to use ID, based on user inspection
-            console.log(`[ia_telkom_filler.js] Waiting for tab trigger "${tabTriggerSelector}" to appear in DOM...`);
 
-            waitForElement(tabTriggerSelector, 5000) // Wait up to 5 seconds for the tab trigger
+            // Log modal body content before polling for tab trigger
+            const modalElementForLog = document.getElementById('ModalAddSPK');
+            if (modalElementForLog) {
+                const modalBodyForLog = modalElementForLog.querySelector('.modal-body');
+                if (modalBodyForLog) {
+                    console.log("[ia_telkom_filler.js] HTML of .modal-body before polling for tab trigger (first 3000 chars):", modalBodyForLog.innerHTML.substring(0, 3000));
+                } else {
+                    console.log("[ia_telkom_filler.js] .modal-body not found for logging inside #ModalAddSPK.");
+                }
+            } else {
+                console.log("[ia_telkom_filler.js] #ModalAddSPK not found for logging.");
+            }
+
+            console.log(`[ia_telkom_filler.js] Waiting for tab trigger "${tabTriggerSelector}" to appear in DOM (max 10s)...`); // Updated log message
+
+            waitForElement(tabTriggerSelector, 10000) // Increased timeout to 10 seconds for the tab trigger
                 .then(tabTrigger => {
                     console.log(`[ia_telkom_filler.js] Found tab trigger: ${tabTriggerSelector}. Checking if active and clicking if necessary...`);
                     // Check if the tab is already active to avoid unnecessary click and delay
