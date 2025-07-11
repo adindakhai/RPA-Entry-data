@@ -16,6 +16,56 @@ function isCorrectPage() {
     return false;
 }
 
+// NEW: Function to wait for an element to be visible
+function waitForElementVisibility(selector, parentNodeToObserve, timeoutDuration = 7000) {
+    return new Promise((resolve, reject) => {
+        const isVisible = (el) => {
+            if (!el) return false;
+            const style = window.getComputedStyle(el);
+            // Simplified check: primarily rely on not being display:none and being in the offset tree.
+            if (style.display === 'none') {
+                return false;
+            }
+            return el.offsetParent !== null;
+            // More comprehensive original checks (can be re-enabled if this is too loose):
+            // if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+            //     return false;
+            // }
+            // return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length) && el.offsetParent !== null;
+        };
+
+        let element = document.querySelector(selector);
+        if (element && isVisible(element)) {
+            resolve(element);
+            return;
+        }
+
+        let observer;
+        const timeout = setTimeout(() => {
+            if (observer) observer.disconnect();
+            reject(new Error(`Timeout: Element "${selector}" did not become visible within ${timeoutDuration}ms.`));
+        }, timeoutDuration);
+
+        observer = new MutationObserver((mutationsList, obs) => {
+            element = document.querySelector(selector);
+            if (element && isVisible(element)) {
+                clearTimeout(timeout);
+                obs.disconnect();
+                resolve(element);
+            }
+        });
+
+        const observeTargetNode = parentNodeToObserve || document.body; // Fallback to document.body if no specific parent
+        observer.observe(observeTargetNode, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['style', 'class'] // Observe changes to style and class attributes
+        });
+    });
+}
+
+
 // Function to fill form fields
 function fillFormFields(data) {
     console.log("[ia_telkom_filler.js] Received data to fill:", data);
@@ -34,9 +84,8 @@ function fillFormFields(data) {
 
         const element = document.querySelector(selector);
         if (element) {
-            // JULES: Log element visibility (basic check)
-            const isVisible = !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
-            console.log(`[ia_telkom_filler.js] Element for "${fieldName}" (selector: ${selector}) found. Visible (approx): ${isVisible}`);
+            // Visibility logging removed for this iteration to simplify.
+            // console.log(`[ia_telkom_filler.js] Element for "${fieldName}" (selector: ${selector}) found. Visible (approx): ${isVisible}`);
 
             let processedValue = value;
             // Check if the field is a 'Temuan' or 'Rekomendasi' field and if the value is an array
@@ -47,10 +96,16 @@ function fillFormFields(data) {
 
             // JULES: Handle potential checkboxes by ID
             const checkboxIds = ["#closeinput", "#rescheduleinput", "#overdueinput", "#onscheduleinput"];
-            if (checkboxIds.includes(selector.toLowerCase()) && (element.type === 'checkbox' || element.type === 'radio')) { // Added radio just in case
+            const isCheckboxOrRadio = checkboxIds.includes(selector.toLowerCase()) && (element.type === 'checkbox' || element.type === 'radio');
+
+            if (typeof element.focus === 'function') {
+                try { element.focus(); } catch (e) { console.warn(`[ia_telkom_filler.js] Error focusing element ${fieldName}: ${e.message}`); }
+            }
+
+            if (isCheckboxOrRadio) {
                 const checkedValue = String(processedValue).toLowerCase();
                 element.checked = checkedValue === "1" || checkedValue === "true";
-                console.log(`[ia_telkom_filler.js] Set checkbox/radio "${fieldName}" (selector: ${selector}) to checked: ${element.checked} (based on value: "${processedValue}")`);
+                // console.log for checkbox/radio is now part of the logging at the end.
             } else if (element.type === 'date') {
                 if (processedValue === '' || /^\d{4}-\d{2}-\d{2}$/.test(processedValue)) {
                     element.value = processedValue;
@@ -58,9 +113,9 @@ function fillFormFields(data) {
                     console.warn(`[ia_telkom_filler.js] Invalid date format "${processedValue}" for "${fieldName}" (selector: ${selector}). Expected YYYY-MM-DD. Skipping.`);
                     errors.push(`Invalid date format for ${fieldName}: ${processedValue}`);
                     allFieldsFound = false;
-                    return;
+                    return; // Skip event dispatching for invalid date
                 }
-            } else if (type === 'select' || element.nodeName.toLowerCase() === 'select') { // Check nodeName as well for select
+            } else if (type === 'select' || element.nodeName.toLowerCase() === 'select') {
                 let optionFound = false;
                 for (let i = 0; i < element.options.length; i++) {
                     if (element.options[i].value === String(processedValue) || element.options[i].text === String(processedValue)) {
@@ -69,19 +124,45 @@ function fillFormFields(data) {
                         break;
                     }
                 }
-                if (!optionFound && processedValue !== "") { // Don't warn if intentionally clearing
+                if (!optionFound && processedValue !== "") {
                      console.warn(`[ia_telkom_filler.js] Option "${processedValue}" not found for select "${fieldName}" (selector: ${selector}).`);
                 }
             } else { // input, textarea
                 element.value = processedValue;
             }
 
-            element.dispatchEvent(new Event('input', { bubbles: true }));
-            element.dispatchEvent(new Event('change', { bubbles: true }));
-            // JULES: For non-checkboxes, the log message is slightly different now due to checkbox handling above
-            if (!(checkboxIds.includes(selector.toLowerCase()) && (element.type === 'checkbox' || element.type === 'radio'))) {
-                 console.log(`[ia_telkom_filler.js] Set "${fieldName}" (selector: ${selector}) to (processed): "${processedValue}"`);
+            // Dispatch a comprehensive sequence of events
+            const commonEvents = [
+                new Event('input', { bubbles: true, cancelable: true }), // Basic input event
+                new Event('change', { bubbles: true, cancelable: true }) // Basic change event
+            ];
+
+            if (element.type === 'text' || element.type === 'textarea' || element.type === 'date' || element.nodeName.toLowerCase() === 'textarea') {
+                // More elaborate sequence for text-like fields
+                element.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: ' ' })); // Simulate a key press
+                try { // InputEvent is more modern for text input
+                    element.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true, inputType: 'insertText' }));
+                } catch (e) { // Fallback for older environments or if InputEvent is not applicable
+                    element.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
+                }
+                element.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, cancelable: true, key: ' ' }));
+                commonEvents.forEach(ev => element.dispatchEvent(ev)); // Dispatch change after keyup and input
+            } else {
+                // For other types like select, checkbox, radio
+                commonEvents.forEach(ev => element.dispatchEvent(ev));
             }
+
+            if (typeof element.blur === 'function') {
+                try { element.blur(); } catch (e) { console.warn(`[ia_telkom_filler.js] Error blurring element ${fieldName}: ${e.message}`);}
+            }
+
+            // Centralized logging of successful value setting
+            if (isCheckboxOrRadio) {
+                console.log(`[ia_telkom_filler.js] Set checkbox/radio "${fieldName}" (selector: ${selector}) to checked: ${element.checked} (based on value: "${processedValue}")`);
+            } else {
+                console.log(`[ia_telkom_filler.js] Set "${fieldName}" (selector: ${selector}) to (processed): "${processedValue}"`);
+            }
+
         } else {
             console.warn(`[ia_telkom_filler.js] Element with selector "${selector}" for field "${fieldName}" not found.`);
             if (value !== "" && value !== undefined && value !== null && value !== "Data belum ditemukan") {
@@ -119,10 +200,10 @@ function fillFormFields(data) {
 
     // --- ND SVP IA Fields ---
     // USER: Please verify these selectors if fields are not filling. Check console for "Element ... not found" errors.
-    setFieldValue('input[name="ND_SVP_IA_Nomor"]', data.ND_SVP_IA_Nomor, 'Nomor ND SVP IA'); // Also .inputND_SVP_IA_Nomor. Assumed to be an input field.
+    setFieldValue('#ND_SVP_IA_Nomor_form', data.ND_SVP_IA_Nomor, 'Nomor ND SVP IA'); // Changed selector to ID based on user feedback. Assumed to be an input field.
 
-    // Changed selector to be more general for Desc_ND_SVP_IA (input or textarea) and specified type as textarea.
-    setFieldValue('[name="Desc_ND_SVP_IA"]', data.Desc_ND_SVP_IA, 'Deskripsi ND SVP IA', 'textarea'); // Also .inputDesc_ND_SVP_IA.
+    // Corrected selector and type for Deskripsi ND SVP IA based on user feedback.
+    setFieldValue('#ND_SVP_IA_Deskripsi_form', data.Desc_ND_SVP_IA, 'Deskripsi ND SVP IA', 'input');
 
     setFieldValue('#ND_SVP_IA_Tanggal_Entry', data.ND_SVP_IA_Tanggal, 'Tanggal ND SVP IA', 'date');
 
@@ -197,18 +278,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 console.log("[ia_telkom_filler.js] #ModalAddSPK appears to be already open or visible.");
             }
 
+            // Reverted to fixed timeout.
             // Wait a short moment for the modal to potentially open/render if it wasn't already.
-            // This is a common requirement for SPAs or pages with dynamic content.
             setTimeout(() => {
-                const modalForm = document.getElementById('ModalAddSPK');
-                if (!modalForm || (modalForm.style.display !== 'block' && !modalForm.classList.contains('in'))) {
-                    console.error("[ia_telkom_filler.js] #ModalAddSPK is not visible after attempting to open.");
-                    sendResponse({ success: false, message: "Could not open or find the new entry modal (#ModalAddSPK)." });
+                const modalForm = document.getElementById('ModalAddSPK'); // Re-check modal existence/visibility
+                if (!modalForm || !(modalForm.classList.contains('in') || modalForm.style.display === 'block')) {
+                    console.error("[ia_telkom_filler.js] #ModalAddSPK is not visible after attempting to open or has disappeared.");
+                    sendResponse({ success: false, message: "Could not open or find the new entry modal (#ModalAddSPK) before filling." });
                     return;
                 }
+                console.log("[ia_telkom_filler.js] Modal #ModalAddSPK is open. Proceeding to fill form after delay.");
                 const result = fillFormFields(request.data);
                 sendResponse(result);
-            }, 2500); // Increased timeout from 1000ms to 2500ms for modal content rendering
+            }, 2500); // Fixed delay of 2.5 seconds
 
         } else {
             console.error("[ia_telkom_filler.js] 'Input Data dengan SPK Baru' button not found.");
