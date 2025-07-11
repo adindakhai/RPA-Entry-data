@@ -289,7 +289,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 }
                 console.log("[ia_telkom_filler.js] Modal #ModalAddSPK is open. Checking for Detail ND SVP IA tab trigger...");
 
-                const tabTriggerSelector = 'a[href="#tabDetailNDIA"]';
+                const tabTriggerSelector = 'a[href="#pills-profile"]'; // Corrected selector based on user inspection
                 const tabTrigger = document.querySelector(tabTriggerSelector);
 
                 if (tabTrigger) {
