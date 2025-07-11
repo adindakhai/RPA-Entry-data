@@ -109,8 +109,31 @@ textarea:focus-visible {
 }
 
 /* ================================================================== */
-/* === TAMBAHAN KRUSIAL UNTUK MEMPERBAIKI MASALAH TAMPILAN TEXTAREA === */
+/* === FORM FIELD UNIFORMITY === */
 /* ================================================================== */
+
+/* Apply box-sizing to all relevant input types for consistent sizing */
+input[type="text"],
+input[type="date"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+textarea {
+    box-sizing: border-box;
+}
+
+/* Set a uniform height for single-line input fields */
+input[type="text"],
+input[type="date"],
+input[type="number"],
+input[type="email"],
+input[type="password"] {
+    height: 2.5rem; /* Approx 40px, adjust if necessary */
+    /* Vertical padding is handled by Tailwind's py-2,
+       and box-sizing: border-box ensures it's included in the height. */
+}
+
+/* Apply consistent initial height and existing textarea rules */
 textarea {
     /* Batasi tinggi maksimum agar tidak melebihi jendela popup */
     max-height: 150px; 
@@ -119,6 +142,10 @@ textarea {
     overflow-y: auto; 
 
     /* Opsional: pastikan ukuran lebar tetap konsisten */
-    width: 100%;
-    box-sizing: border-box; /* agar padding tidak menambah lebar */
+    width: 100%; /* Already applied by w-full class in HTML but good for explicitness */
+
+    /* New: Set initial height to match other inputs */
+    height: 2.5rem; /* Approx 40px, adjust if necessary */
+    /* min-height could also be used if JS resizer needs to shrink it,
+       but for initial visual consistency, height is fine. */
 }
