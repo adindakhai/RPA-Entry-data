@@ -208,7 +208,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 }
                 const result = fillFormFields(request.data);
                 sendResponse(result);
-            }, 1000); // Adjust timeout as needed, or implement MutationObserver for robustness
+            }, 2500); // Increased timeout from 1000ms to 2500ms for modal content rendering
 
         } else {
             console.error("[ia_telkom_filler.js] 'Input Data dengan SPK Baru' button not found.");
