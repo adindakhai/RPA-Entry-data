@@ -228,6 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // ############# JULES: ADDED DETAILED LOG #############
             console.log("[popup.js] --- BEGINNING OF DATA FOR MTL ---");
+            console.log("[popup.js] Value of 'Deskripsi ND SVP IA' from popup:", deskripsiNdSvpIaInput.value);
             console.log("[popup.js] Data being sent to ia_telkom_filler.js:", JSON.stringify(dataForMTL, null, 2));
             console.log("[popup.js] --- END OF DATA FOR MTL ---");
             // ############# JULES: END OF ADDED LOG #############
