@@ -95,8 +95,6 @@ function fillFormFields(data) {
                 element.value = processedValue;
             }
             
-            console.log(`[ia_telkom_filler.js] PRE-EVENT: Value for "${fieldName}" set to: "${element.value}"`);
-
             // Dispatch events to ensure frameworks like React/Angular detect the change
             const commonEvents = [
                 new Event('input', { bubbles: true, cancelable: true }),
@@ -106,12 +104,6 @@ function fillFormFields(data) {
 
             if (typeof element.blur === 'function') {
                 try { element.blur(); } catch (e) { console.warn(`[ia_telkom_filler.js] Error blurring element ${fieldName}: ${e.message}`); }
-            }
-
-            if (isCheckboxOrRadio) {
-                console.log(`[ia_telkom_filler.js] FINAL: Set checkbox/radio "${fieldName}" to checked: ${element.checked}`);
-            } else {
-                console.log(`[ia_telkom_filler.js] FINAL: Set "${fieldName}" to value: "${element.value}"`);
             }
 
         } else {
