@@ -183,7 +183,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
             // Ekstraksi Deskripsi ND SVP IA (Perihal)
             try {
-                const perihalStartKeywords = ["Perihal:", "Perihal :", "Hal :", "Hal:"];
+                const perihalStartKeywords = [
+                    "Perihal\t:", // From user log
+                    "Perihal \t:", // Variation with space
+                    "Perihal:",
+                    "Perihal :",
+                    "Hal :",
+                    "Hal:"
+                ];
                 // Perihal is usually a single line. End before the main content starts.
                 // Common follow-ups: Kepada Yth, Dengan hormat, Menunjuk, line breaks.
                 // For a simple single-line perihal:
