@@ -317,7 +317,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
             console.log(`[ia_telkom_filler.js] Waiting for tab trigger "${tabTriggerSelector}" to appear in DOM (max 10s)...`); // Updated log message
 
-            waitForElement(tabTriggerSelector, 10000) // Increased timeout to 10 seconds for the tab trigger
+            waitForElement(tabTriggerSelector, 5000) // Increased timeout to 10 seconds for the tab trigger
                 .then(tabTrigger => {
                     console.log(`[ia_telkom_filler.js] Found tab trigger: ${tabTriggerSelector}. Checking if active and clicking if necessary...`);
                     // Check if the tab is already active to avoid unnecessary click and delay
