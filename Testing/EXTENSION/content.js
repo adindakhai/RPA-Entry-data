@@ -187,7 +187,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 // Perihal is usually a single line. End before the main content starts.
                 // Common follow-ups: Kepada Yth, Dengan hormat, Menunjuk, line breaks.
                 // For a simple single-line perihal:
-                const perihalEndKeywords = ["\n", "Kepada Yth", "Dengan hormat", "Menunjuk"];
+                const perihalEndKeywords = ["Lampiran:", "Kepada Yth", "Dengan hormat", "Menunjuk"];
                 const perihalText = getTextBetweenKeywords(bodyText, perihalStartKeywords, perihalEndKeywords);
                 if (perihalText) {
                     extractedData.deskripsiNdSvpIa = perihalText.trim();
