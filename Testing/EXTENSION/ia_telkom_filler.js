@@ -110,27 +110,27 @@ function fillFormFields(data) {
 
     // --- Form Field Definitions ---
     // Tab 1: Default
+    setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(1) > div > input', data.no_spk, 'No SPK');
     setFieldValue('#kelompok', data.kelompok, 'Kelompok', 'select');
-    setFieldValue('input[name="no_spk"]', data.no_spk, 'No SPK');
-    setFieldValue('input[name="CODE"]', data.CODE, 'CODE');
-    setFieldValue('input[name="Matriks_Program"]', data.Matriks_Program, 'Matriks Program');
+    setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(3) > div > input', data.CODE, 'CODE');
+    setFieldValue('#Masa_Penyelesaian_Pekerjaan1_Entry_form', data.Masa_Penyelesaian_Pekerjaan1_Entry_form, 'Masa Penyelesaian Pekerjaan');
+    setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(5) > div > input', data.Matriks_Program, 'Matriks Program');
     setFieldValue('#Matriks_Tgl_Entry', data.Matriks_Tgl, 'Tanggal Matriks', 'date');
 
     // Tab 2: Detail ND SVP IA
-    setFieldValue('input[name="ND_SVP_IA_Nomor"]', data.ND_SVP_IA_Nomor, 'Nomor ND SVP IA');
-    setFieldValue('input[name="Desc_ND_SVP_IA"]', data.Desc_ND_SVP_IA, 'Deskripsi ND SVP IA');
+    setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(7) > div > input', data.ND_SVP_IA_Nomor, 'Nomor ND SVP IA');
+    setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(8) > div > input', data.Desc_ND_SVP_IA, 'Deskripsi ND SVP IA');
     setFieldValue('#ND_SVP_IA_Tanggal_Entry', data.ND_SVP_IA_Tanggal, 'Tanggal ND SVP IA', 'date');
     setFieldValue('#inputND_SVP_IA_Temuan', data.ND_SVP_IA_Temuan, 'Temuan ND SVP IA', 'textarea');
     setFieldValue('#inputND_SVP_IA_Rekomendasi', data.ND_SVP_IA_Rekomendasi, 'Rekomendasi ND SVP IA', 'textarea');
 
     // Tab 3: Detail ND Dirut
-    setFieldValue('input[name="ND_Dirut_Nomor"]', data.ND_Dirut_Nomor, 'Nomor ND Dirut');
-    setFieldValue('input[name="Desc_ND_Dirut"]', data.Desc_ND_Dirut, 'Deskripsi ND Dirut');
-    setFieldValue('input[name="ND_Dirut_Tgl"]', data.ND_Dirut_Tgl, 'Tanggal ND Dirut', 'date');
+    setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(12) > div > input', data.ND_Dirut_Nomor, 'Nomor ND Dirut');
+    setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(13) > div > input', data.Desc_ND_Dirut, 'Deskripsi ND Dirut');
+    setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(14) > div > input', data.ND_Dirut_Tgl, 'Tanggal ND Dirut', 'date');
     setFieldValue('#inputND_Dirut_Temuan', data.ND_Dirut_Temuan, 'Temuan ND Dirut', 'textarea');
     setFieldValue('#inputND_Dirut_Rekomendasi', data.ND_Dirut_Rekomendasi, 'Rekomendasi ND Dirut', 'textarea');
     setFieldValue('#ND_Dirut_Duedate1', data.ND_Dirut_Duedate1, 'Duedate ND Dirut 1', 'select');
-    setFieldValue('#ND_Dirut_Duedate2', data.ND_Dirut_Duedate2, 'Duedate ND Dirut 2', 'select');
     setFieldValue('input[name="ND_Dirut_PIC"]', data.ND_Dirut_PIC, 'PIC ND Dirut');
     setFieldValue('input[name="ND_Dirut_UIC"]', data.ND_Dirut_UIC, 'UIC ND Dirut');
 
