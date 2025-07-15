@@ -149,9 +149,8 @@ function fillFormFields(data) {
     return { success: true, message: "All form fields populated successfully." };
 }
 
-/**
- * Main listener for messages from the browser extension popup.
- */
+// ===== Modifications in ia_telkom_filler.js to ensure ND SVP IA fields & error messages =====
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (!isCorrectPage()) {
         sendResponse({ success: false, message: "Script is not running on the target IA Telkom MTL page." });
@@ -162,29 +161,73 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         console.log("[ia_telkom_filler.js] Received 'fillMTLForm' action.");
 
         const openModalButton = document.querySelector('button[data-target="#ModalAddSPK"]');
-        if (!openModalButton) {
-            console.error("[ia_telkom_filler.js] 'Input Data dengan SPK Baru' button not found.");
-            sendResponse({ success: false, message: "'Input Data dengan SPK Baru' button not found on the page." });
-            return true;
-        }
-
         const modalElement = document.getElementById('ModalAddSPK');
         const isModalOpen = modalElement && (modalElement.classList.contains('in') || modalElement.style.display === 'block');
 
         if (!isModalOpen) {
             openModalButton.click();
-            console.log("[ia_telkom_filler.js] Clicked 'Input Data dengan SPK Baru' button to open modal.");
-        } else {
-            console.log("[ia_telkom_filler.js] Modal #ModalAddSPK is already open.");
-        }
-        
-        // It's often better to wait a moment for modal animations to complete
-        setTimeout(() => {
-            const result = fillFormFields(request.data);
-            sendResponse(result);
-        }, 500); // Wait 500ms for modal to be ready
+            console.log("[ia_telkom_filler.js] Clicked to open modal.");
 
-        return true; // Indicates an asynchronous response.
+            const ndSvpIaTab = document.querySelector('a[href="#pills-profile"], button[aria-controls="pills-profile"]');
+            if (ndSvpIaTab) {
+                ndSvpIaTab.click();
+                console.log("[ia_telkom_filler.js] Switched to ND SVP IA tab.");
+            } else {
+                console.warn("[ia_telkom_filler.js] ND SVP IA tab button not found.");
+            }
+        } else {
+            console.log("[ia_telkom_filler.js] Modal already open.");
+        }
+
+        setTimeout(() => {
+            const data = request.data || {};
+            const fields = {
+                "no_spk": "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(1) > div > input",
+                "kelompok": "#kelompok",
+                "CODE": "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(3) > div > input",
+                "Masa_Penyelesaian_Pekerjaan": "#Masa_Penyelesaian_Pekerjaan1_Entry_form",
+                "Matriks_Program": "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(5) > div > input",
+                "Matriks_Tgl": "#Matriks_Tgl_Entry",
+                "ND_SVP_IA_Nomor": "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(7) > div > input",
+                "Desc_ND_SVP_IA": "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(8) > div > input",
+                "ND_SVP_IA_Tanggal": "#ND_SVP_IA_Tanggal_Entry",
+                "ND_SVP_IA_Temuan": "#inputND_SVP_IA_Temuan",
+                "ND_SVP_IA_Rekomendasi": "#inputND_SVP_IA_Rekomendasi",
+                "ND_Dirut_Nomor": "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(12) > div > input",
+                "Desc_ND_Dirut": "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(13) > div > input",
+                "ND_Dirut_Tgl": "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(14) > div > input",
+                "ND_Dirut_Temuan": "#inputND_Dirut_Temuan",
+                "ND_Dirut_Rekomendasi": "#inputND_Dirut_Rekomendasi",
+                "ND_Dirut_Duedate1": "#ND_Dirut_Duedate1",
+                "ND_Dirut_PIC": "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(18) > div > input",
+                "ND_Dirut_UIC": "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(19) > div > input",
+                "MTL_Closed": "#closeinput",
+                "Reschedule": "#rescheduleinput",
+                "Overdue": "#overdueinput",
+                "OnSchedule": "#onscheduleinput",
+                "Status": "#statusinput"
+            };
+
+            Object.entries(fields).forEach(([key, selector]) => {
+                const el = document.querySelector(selector);
+                if (!el) {
+                    console.warn(`[ia_telkom_filler.js] Element for ${key} not found.`);
+                    return;
+                }
+                if (!(key in data)) {
+                    el.value = "Data tidak sampai";
+                } else if (data[key] === null || data[key] === "") {
+                    el.value = "Data tidak ditemukan dalam notadinas";
+                } else {
+                    el.value = data[key];
+                }
+                console.log(`[ia_telkom_filler.js] Set ${key} =>`, el.value);
+            });
+
+            sendResponse({ success: true });
+        }, 1000);
+
+        return true;
     }
 });
 
