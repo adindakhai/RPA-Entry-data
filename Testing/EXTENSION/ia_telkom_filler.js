@@ -65,7 +65,8 @@ function fillFormFields(data) {
         // Pre-process value if needed (e.g., formatting arrays into bullet points for textareas)
         let processedValue = value;
         if ((fieldName.toLowerCase().includes('temuan') || fieldName.toLowerCase().includes('rekomendasi')) && Array.isArray(value)) {
-            processedValue = value.map(item => `- ${item}`).join('\n');
+            const filteredValue = value.filter(item => !item.toLowerCase().includes("yang perlu mendapat perhatian manajemen") && !item.toLowerCase().includes("kepada manajemen dt agar"));
+            processedValue = filteredValue.map(item => `- ${item}`).join('\n');
             console.log(`[ia_telkom_filler.js] Formatted array for "${fieldName}" to bulleted list.`);
         }
 
