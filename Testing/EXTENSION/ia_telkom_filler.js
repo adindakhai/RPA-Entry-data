@@ -1,8 +1,3 @@
-/**
- * @file Content script for automating form filling on the IA Telkom MTL page.
- * @version 2.0 (Refactored)
- */
-
 console.log("[ia_telkom_filler.js] Loaded.");
 
 /**
@@ -43,14 +38,15 @@ function fillFormFields(data) {
         console.log(`[ia_telkom_filler.js] Attempting to fill field: "${fieldName}" with selector: "${selector}"`);
 
         // Skip if the value is null, undefined, or a specific "not found" string, but allow empty strings.
-        if (value === undefined || value === null || value === "Data belum ditemukan") {
-            if (value !== "") {
-                console.log(`[ia_telkom_filler.js] No valid data for "${fieldName}". Skipping.`);
-                return;
-            }
-        }
+        // if (value === undefined || value === null || value === "Data belum ditemukan") {
+        //     if (value !== "") {
+        //         console.log(`[ia_telkom_filler.js] No valid data for "${fieldName}". Skipping.`);
+        //         return;
+        //     }
+        // }
 
         const element = document.querySelector(selector);
+        // console.log('coba ya')
         if (!element) {
             console.error(`[ia_telkom_filler.js] ERROR: Element with selector "${selector}" for field "${fieldName}" not found.`);
             // Only report an error if there was actual data to be filled.
@@ -61,7 +57,6 @@ function fillFormFields(data) {
         }
 
         console.log(`[ia_telkom_filler.js] SUCCESS: Found element for "${fieldName}"`, element);
-        
         // Pre-process value if needed (e.g., formatting arrays into bullet points for textareas)
         let processedValue = value;
         if ((fieldName.toLowerCase().includes('temuan') || fieldName.toLowerCase().includes('rekomendasi')) && Array.isArray(value)) {
@@ -74,7 +69,12 @@ function fillFormFields(data) {
         try { element.focus(); } catch (e) { console.warn(`[ia_telkom_filler.js] Error focusing on ${fieldName}: ${e.message}`); }
         
         // Set value based on element type
-        if (element.type === 'checkbox' || element.type === 'radio') {
+        console.log(element.type, processedValue);
+        if (element.type === 'textarea') {
+            element.value = processedValue;
+            console.log('textarea terisi')
+        }
+        else if (element.type === 'checkbox' || element.type === 'radio') {
             const checkedValue = String(processedValue).toLowerCase();
             element.checked = checkedValue === "1" || checkedValue === "true";
         } else if (element.type === 'date') {
@@ -108,48 +108,72 @@ function fillFormFields(data) {
         
         try { element.blur(); } catch (e) { console.warn(`[ia_telkom_filler.js] Error blurring ${fieldName}: ${e.message}`); }
     }
+    // // --- Form Field Definitions ---
+    // // Tab 1: Default
+    // setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(1) > div > input', data.no_spk, 'No SPK');
+    // setFieldValue('#kelompok', data.kelompok, 'Kelompok', 'select');
+    // setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(3) > div > input', data.CODE, 'CODE');
+    // setFieldValue('#Masa_Penyelesaian_Pekerjaan1_Entry_form', data.Masa_Penyelesaian_Pekerjaan1_Entry_form, 'Masa Penyelesaian Pekerjaan');
+    // setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(5) > div > input', data.Matriks_Program, 'Matriks Program');
+    // setFieldValue('#Matriks_Tgl_Entry', data.Matriks_Tgl, 'Tanggal Matriks', 'date');
 
-    // --- Form Field Definitions ---
-    // Tab 1: Default
-    setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(1) > div > input', data.no_spk, 'No SPK');
-    setFieldValue('#kelompok', data.kelompok, 'Kelompok', 'select');
-    setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(3) > div > input', data.CODE, 'CODE');
-    setFieldValue('#Masa_Penyelesaian_Pekerjaan1_Entry_form', data.Masa_Penyelesaian_Pekerjaan1_Entry_form, 'Masa Penyelesaian Pekerjaan');
-    setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(5) > div > input', data.Matriks_Program, 'Matriks Program');
-    setFieldValue('#Matriks_Tgl_Entry', data.Matriks_Tgl, 'Tanggal Matriks', 'date');
+    // // Tab 2: Detail ND SVP IA
+    // setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(7) > div > input', data.ND_SVP_IA_Nomor, 'Nomor ND SVP IA');
+    // setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(8) > div > input', data.Desc_ND_SVP_IA, 'Deskripsi ND SVP IA');
+    // setFieldValue('#ND_SVP_IA_Tanggal_Entry', data.ND_SVP_IA_Tanggal, 'Tanggal ND SVP IA', 'date');
+    // // setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(10) > div > textarea', data.ND_SVP_IA_Temuan, 'Temuan ND SVP IA');
+    // setFieldValue('#inputND_SVP_IA_Temuan.form-control.inputND_SVP_IA_Temuan', 'data.ND_SVP_IA_Temuan', 'textarea');
+    // setFieldValue('#inputND_SVP_IA_Rekomendasi', data.ND_SVP_IA_Rekomendasi, 'Rekomendasi ND SVP IA', 'textarea');
 
-    // Tab 2: Detail ND SVP IA
-    setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(7) > div > input', data.ND_SVP_IA_Nomor, 'Nomor ND SVP IA');
-    setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(8) > div > input', data.Desc_ND_SVP_IA, 'Deskripsi ND SVP IA');
-    setFieldValue('#ND_SVP_IA_Tanggal_Entry', data.ND_SVP_IA_Tanggal, 'Tanggal ND SVP IA', 'date');
-    setFieldValue('#inputND_SVP_IA_Temuan', data.ND_SVP_IA_Temuan, 'Temuan ND SVP IA', 'textarea');
-    setFieldValue('#inputND_SVP_IA_Rekomendasi', data.ND_SVP_IA_Rekomendasi, 'Rekomendasi ND SVP IA', 'textarea');
+    // // Tab 3: Detail ND Dirut
+    // setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(12) > div > input', data.ND_Dirut_Nomor, 'Nomor ND Dirut');
+    // setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(13) > div > input', data.Desc_ND_Dirut, 'Deskripsi ND Dirut');
+    // setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(14) > div > input', data.ND_Dirut_Tgl, 'Tanggal ND Dirut', 'date');
+    // setFieldValue('#inputND_Dirut_Temuan', data.ND_Dirut_Temuan, 'Temuan ND Dirut', 'textarea');
+    // setFieldValue('#inputND_Dirut_Rekomendasi', data.ND_Dirut_Rekomendasi, 'Rekomendasi ND Dirut', 'textarea');
+    // setFieldValue('#ND_Dirut_Duedate1', data.ND_Dirut_Duedate1, 'Duedate ND Dirut 1', 'select');
+    // setFieldValue('input[name="ND_Dirut_PIC"]', data.ND_Dirut_PIC, 'PIC ND Dirut');
+    // setFieldValue('input[name="ND_Dirut_UIC"]', data.ND_Dirut_UIC, 'UIC ND Dirut');
 
-    // Tab 3: Detail ND Dirut
-    setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(12) > div > input', data.ND_Dirut_Nomor, 'Nomor ND Dirut');
-    setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(13) > div > input', data.Desc_ND_Dirut, 'Deskripsi ND Dirut');
-    setFieldValue('#ModalAddSPK > div > div > form > div > div.container > div:nth-child(14) > div > input', data.ND_Dirut_Tgl, 'Tanggal ND Dirut', 'date');
-    setFieldValue('#inputND_Dirut_Temuan', data.ND_Dirut_Temuan, 'Temuan ND Dirut', 'textarea');
-    setFieldValue('#inputND_Dirut_Rekomendasi', data.ND_Dirut_Rekomendasi, 'Rekomendasi ND Dirut', 'textarea');
-    setFieldValue('#ND_Dirut_Duedate1', data.ND_Dirut_Duedate1, 'Duedate ND Dirut 1', 'select');
-    setFieldValue('input[name="ND_Dirut_PIC"]', data.ND_Dirut_PIC, 'PIC ND Dirut');
-    setFieldValue('input[name="ND_Dirut_UIC"]', data.ND_Dirut_UIC, 'UIC ND Dirut');
+    // // Tab 4: Status MTL
+    // setFieldValue('#closeinput', data.MTL_Closed, 'MTL Closed');
+    // setFieldValue('#rescheduleinput', data.Reschedule, 'Reschedule');
+    // setFieldValue('#overdueinput', data.Overdue, 'Overdue');
+    // setFieldValue('#onscheduleinput', data.OnSchedule, 'OnSchedule');
+    // setFieldValue('#statusinput', data.Status, 'Status');
 
-    // Tab 4: Status MTL
-    setFieldValue('#closeinput', data.MTL_Closed, 'MTL Closed');
-    setFieldValue('#rescheduleinput', data.Reschedule, 'Reschedule');
-    setFieldValue('#overdueinput', data.Overdue, 'Overdue');
-    setFieldValue('#onscheduleinput', data.OnSchedule, 'OnSchedule');
-    setFieldValue('#statusinput', data.Status, 'Status');
-
-    if (errors.length > 0) {
-        return { success: false, message: `Some fields could not be filled: ${errors.join('; ')}` };
-    }
+    // if (errors.length > 0) {
+    //     return { success: false, message: `Some fields could not be filled: ${errors.join('; ')}` };
+    // }
     
-    return { success: true, message: "All form fields populated successfully." };
+    // return { success: true, message: "All form fields populated successfully." };
 }
 
-// ===== Modifications in ia_telkom_filler.js to ensure ND SVP IA fields & error messages =====
+// ===== ia_telkom_filler.js v2+: Add manual textarea resize after setting value =====
+
+// --- Framework & Library Detection (run once at load) ---
+(function detectFramework() {
+    console.group('[ia_telkom_filler.js] Environment Detection');
+    console.log('jQuery present?', !!window.jQuery);
+    console.log('React present?', !!window.React, 'ReactDOM present?', !!window.ReactDOM);
+    console.log('Vue present?', !!window.Vue, 'Vue version:', window.Vue && window.Vue.version);
+    console.log('AngularJS present?', !!window.angular && !!window.angular.module);
+    console.log('Angular root elems:', window.getAllAngularRootElements ? window.getAllAngularRootElements() : 'N/A');
+    console.log('Svelte present?', !!window.__SVELTE_DEVTOOLS_GLOBAL_HOOK__);
+    console.log('CKEditor present?', !!window.CKEDITOR);
+    console.log('TinyMCE present?', !!window.tinymce);
+    if (window.tinymce) console.log('TinyMCE editors:', tinymce.editors.map(e => e.id));
+    if (window.CKEDITOR) console.log('CKEditor instances:', CKEDITOR.instances);
+
+    const ta = document.querySelector('#inputND_SVP_IA_Temuan');
+    if (ta) {
+        console.log('Textarea visibility:', getComputedStyle(ta).display, 'height:', ta.offsetHeight);
+        const wrapper = ta.closest('div') || ta.parentElement;
+        const editors = wrapper.querySelectorAll('[contenteditable], iframe');
+        console.log('Rich-text containers near textarea:', editors.length, editors);
+    }
+    console.groupEnd();
+})();
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (!isCorrectPage()) {
@@ -160,68 +184,82 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "fillMTLForm") {
         console.log("[ia_telkom_filler.js] Received 'fillMTLForm' action.");
 
+        // 1. Open modal and switch to ND SVP IA tab
         const openModalButton = document.querySelector('button[data-target="#ModalAddSPK"]');
         const modalElement = document.getElementById('ModalAddSPK');
         const isModalOpen = modalElement && (modalElement.classList.contains('in') || modalElement.style.display === 'block');
-
         if (!isModalOpen) {
             openModalButton.click();
-            console.log("[ia_telkom_filler.js] Clicked to open modal.");
-
+            console.log("Clicked modal open button");
             const ndSvpIaTab = document.querySelector('a[href="#pills-profile"], button[aria-controls="pills-profile"]');
             if (ndSvpIaTab) {
                 ndSvpIaTab.click();
-                console.log("[ia_telkom_filler.js] Switched to ND SVP IA tab.");
-            } else {
-                console.warn("[ia_telkom_filler.js] ND SVP IA tab button not found.");
+                console.log("Switched to ND SVP IA tab");
             }
-        } else {
-            console.log("[ia_telkom_filler.js] Modal already open.");
         }
 
+        // 2. Delay to allow UI render
         setTimeout(() => {
             const data = request.data || {};
             const fields = {
-                "no_spk": "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(1) > div > input",
-                "kelompok": "#kelompok",
-                "CODE": "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(3) > div > input",
-                "Masa_Penyelesaian_Pekerjaan": "#Masa_Penyelesaian_Pekerjaan1_Entry_form",
-                "Matriks_Program": "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(5) > div > input",
-                "Matriks_Tgl": "#Matriks_Tgl_Entry",
-                "ND_SVP_IA_Nomor": "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(7) > div > input",
-                "Desc_ND_SVP_IA": "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(8) > div > input",
-                "ND_SVP_IA_Tanggal": "#ND_SVP_IA_Tanggal_Entry",
-                "ND_SVP_IA_Temuan": "#inputND_SVP_IA_Temuan",
-                "ND_SVP_IA_Rekomendasi": "#inputND_SVP_IA_Rekomendasi",
-                "ND_Dirut_Nomor": "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(12) > div > input",
-                "Desc_ND_Dirut": "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(13) > div > input",
-                "ND_Dirut_Tgl": "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(14) > div > input",
-                "ND_Dirut_Temuan": "#inputND_Dirut_Temuan",
-                "ND_Dirut_Rekomendasi": "#inputND_Dirut_Rekomendasi",
-                "ND_Dirut_Duedate1": "#ND_Dirut_Duedate1",
-                "ND_Dirut_PIC": "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(18) > div > input",
-                "ND_Dirut_UIC": "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(19) > div > input",
-                "MTL_Closed": "#closeinput",
-                "Reschedule": "#rescheduleinput",
-                "Overdue": "#overdueinput",
-                "OnSchedule": "#onscheduleinput",
-                "Status": "#statusinput"
+                no_spk: "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(1) > div > input",
+                kelompok: "#kelompok",
+                CODE: "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(3) > div > input",
+                Masa_Penyelesaian_Pekerjaan: "#Masa_Penyelesaian_Pekerjaan1_Entry_form",
+                Matriks_Program: "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(5) > div > input",
+                Matriks_Tgl: "#Matriks_Tgl_Entry",
+                ND_SVP_IA_Nomor: "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(7) > div > input",
+                Desc_ND_SVP_IA: "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(8) > div > input",
+                ND_SVP_IA_Tanggal: "#ND_SVP_IA_Tanggal_Entry",
+                ND_SVP_IA_Temuan: '#ModalAddSPK > div > div > form > div > div.container > div:nth-child(10) > div > textarea',
+                ND_SVP_IA_Rekomendasi: '#ModalAddSPK > div > div > form > div > div.container > div:nth-child(11) > div > textarea',
+                ND_Dirut_Nomor: "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(12) > div > input",
+                Desc_ND_Dirut: "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(13) > div > input",
+                ND_Dirut_Tgl: "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(14) > div > input",
+                ND_Dirut_Temuan: "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(15) > div > textarea",
+                ND_Dirut_Rekomendasi: "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(16) > div > textarea",
+                ND_Dirut_Duedate1: "#ND_Dirut_Duedate1",
+                ND_Dirut_PIC: "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(18) > div > input",
+                ND_Dirut_UIC: "#ModalAddSPK > div > div > form > div > div.container > div:nth-child(19) > div > input",
+                MTL_Closed: "#closeinput",
+                Reschedule: "#rescheduleinput",
+                Overdue: "#overdueinput",
+                OnSchedule: "#onscheduleinput",
+                Status: "#statusinput"
             };
 
-            Object.entries(fields).forEach(([key, selector]) => {
-                const el = document.querySelector(selector);
-                if (!el) {
-                    console.warn(`[ia_telkom_filler.js] Element for ${key} not found.`);
-                    return;
-                }
-                if (!(key in data)) {
-                    el.value = "Data tidak sampai";
-                } else if (data[key] === null || data[key] === "") {
-                    el.value = "Data tidak ditemukan dalam notadinas";
+            Object.entries(fields).forEach(([key, sel]) => {
+                const el = document.querySelector(sel);
+                if (!el) return console.warn(`Element ${sel} not found`);
+
+                // Determine value
+                let val;
+                if (!(key in data)) val = "Data tidak sampai";
+                else if (data[key] === null || data[key] === "") val = "Data tidak ditemukan dalam notadinas";
+                else val = data[key];
+
+                // jQuery fallback
+                if (window.jQuery) {
+                    jQuery(el).val(val).trigger('input').trigger('change');
                 } else {
-                    el.value = data[key];
+                    // React-friendly setter
+                    const proto = Object.getPrototypeOf(el);
+                    const desc = Object.getOwnPropertyDescriptor(proto, 'value');
+                    if (desc && desc.set) desc.set.call(el, val);
+                    else el.value = val;
+
+                    // Dispatch native events
+                    ['input','change'].forEach(evt => el.dispatchEvent(new Event(evt, { bubbles: true })));
                 }
-                console.log(`[ia_telkom_filler.js] Set ${key} =>`, el.value);
+
+                console.log(`Set ${key} =>`, el.value);
+
+                // // Manual textarea resize
+                // if (el.tagName === 'TEXTAREA') {
+                //     el.style.height = 'auto';
+                //     el.style.height = el.scrollHeight + 'px';
+                //     ['keydown','keyup'].forEach(evt => el.dispatchEvent(new Event(evt, { bubbles: true })));
+                // }
             });
 
             sendResponse({ success: true });
